@@ -86,9 +86,9 @@ set local role anon;
 select set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
 
 select is(
-  (select count(*) from public.texts where status = 'approved'),
+  (select count(*) from public.texts where id = '33333333-3333-3333-3333-333333333333'),
   1::bigint,
-  'anon can see the approved text'
+  'anon can see the approved fixture text'
 );
 
 select is(

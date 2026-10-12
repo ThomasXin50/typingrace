@@ -10,12 +10,21 @@ vi.mock('./features/auth/useProfile', () => ({
   }),
 }))
 
+vi.mock('./features/typing/SoloTypingTest', () => ({
+  SoloTypingTest: () => <div>typing test</div>,
+}))
+
 describe('App', () => {
   it('renders the heading and the signed-in username', () => {
     render(<App />)
     expect(
       screen.getByRole('heading', { name: 'Typing Race' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Signed in as alice')).toBeInTheDocument()
+    expect(screen.getByText('alice')).toBeInTheDocument()
+  })
+
+  it('renders the solo typing test once auth resolves', () => {
+    render(<App />)
+    expect(screen.getByText('typing test')).toBeInTheDocument()
   })
 })
