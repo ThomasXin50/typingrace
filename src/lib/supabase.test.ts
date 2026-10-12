@@ -11,6 +11,9 @@ describe('supabase client', () => {
   })
 
   it('throws when env vars are missing', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '')
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '')
+
     await expect(import('./supabase')).rejects.toThrow(
       /Missing VITE_SUPABASE_URL/,
     )
