@@ -48,7 +48,7 @@ project is meant to demonstrate.
 ## Comments and documentation
 
 - Default to no comments. Well-named identifiers and small functions should
-  make the *what* obvious without narration.
+  make the _what_ obvious without narration.
 - Write a comment only when it explains something the code can't: a hidden
   constraint, a non-obvious invariant, a workaround for a specific bug, or a
   reason a reader would otherwise have to go dig for.

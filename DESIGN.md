@@ -133,7 +133,7 @@ typing but I'm still in the room and will auto-join the next race."
 ### Liveness: two independent signals, 10s each
 
 - **Stalled** (no keystroke of any kind from a still-connected participant
-  for 10s): `round_participants.status = 'stalled'`. Locked out of *this*
+  for 10s): `round_participants.status = 'stalled'`. Locked out of _this_
   round for good (no resuming, even if they start typing again) — this
   prevents one person from holding the round hostage after giving up.
   Their `room_members` row is untouched: they stay in the room, can spectate
