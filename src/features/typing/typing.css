@@ -10,12 +10,58 @@
   font-size: 1.125rem;
 }
 
+.typing-hint-slot {
+  /* Reserved regardless of whether the hint is shown, so it disappearing
+     never shifts the text below it. */
+  height: 1.5rem;
+}
+
+.typing-status--hint {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.typing-text-wrap {
+  position: relative;
+  cursor: text;
+}
+
 .typing-text {
   font-family: var(--font-mono);
   font-size: 1.5rem;
   line-height: 1.6;
   letter-spacing: -0.01em;
-  cursor: text;
+}
+
+.typing-text-wrap--blurred .typing-text {
+  filter: blur(4px);
+  opacity: 0.6;
+}
+
+.typing-text-wrap--blurred .typing-char--current {
+  animation-play-state: paused;
+}
+
+.typing-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.typing-overlay:hover {
+  color: var(--accent);
 }
 
 .typing-char {
@@ -68,6 +114,27 @@
   align-items: baseline;
   gap: 2.5rem;
   flex-wrap: wrap;
+}
+
+.typing-results--enter {
+  animation: typing-results-enter 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-results--enter {
+    animation: none;
+  }
+}
+
+@keyframes typing-results-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .typing-stat {
@@ -124,6 +191,12 @@
 .typing-next:disabled:hover {
   border-color: var(--border);
   color: var(--text-muted);
+}
+
+.typing-next__shortcut {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.8125rem;
 }
 
 .typing-save-status {

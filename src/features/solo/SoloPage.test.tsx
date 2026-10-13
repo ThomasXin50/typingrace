@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SoloPage } from './SoloPage'
@@ -103,7 +103,7 @@ describe('SoloPage', () => {
     )
   })
 
-  it('requests a new text when "Next text" is clicked', async () => {
+  it('"Next text" is visible and works even before finishing a run', async () => {
     const requestNext = vi.fn()
     mocks.useRandomText.mockReturnValue({
       text: { id: 'a', content: 'ab' },
@@ -115,10 +115,26 @@ describe('SoloPage', () => {
     render(<SoloPage />)
     const user = userEvent.setup()
 
-    await user.type(screen.getByLabelText('Typing input'), 'ab')
-    await waitFor(() => expect(screen.getByText('wpm')).toBeInTheDocument())
-
+    // No typing yet - the button should already be there.
     await user.click(screen.getByRole('button', { name: /next text/i }))
+
+    expect(requestNext).toHaveBeenCalledOnce()
+  })
+
+  it('wires the tab+enter skip shortcut to the same next-text action', () => {
+    const requestNext = vi.fn()
+    mocks.useRandomText.mockReturnValue({
+      text: { id: 'a', content: 'ab' },
+      loading: false,
+      error: null,
+      requestNext,
+    })
+
+    render(<SoloPage />)
+    const input = screen.getByLabelText('Typing input')
+
+    fireEvent.keyDown(input, { key: 'Tab' })
+    fireEvent.keyDown(input, { key: 'Enter' })
 
     expect(requestNext).toHaveBeenCalledOnce()
   })

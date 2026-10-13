@@ -1,0 +1,89 @@
+.wpm-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 40rem;
+}
+
+.wpm-chart__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.wpm-chart__svg {
+  width: 100%;
+  height: auto;
+}
+
+.wpm-chart__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.wpm-chart__gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.wpm-chart__tick-label {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  fill: var(--text-muted);
+}
+
+.wpm-chart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: wpm-chart-draw 0.8s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wpm-chart__line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes wpm-chart-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.wpm-chart__end-dot {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.wpm-chart__crosshair {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.wpm-chart__hover-dot {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.wpm-chart__tooltip {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0;
+}

@@ -1,20 +1,30 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   useTypingEngine,
   type Keystroke,
   type TypingStats,
 } from './useTypingEngine'
+import { WpmChart } from './WpmChart'
+import { computeWpmSeries } from './wpmSeries'
 import './typing.css'
 
 interface TypingRunProps {
   content: string
   onFinish?: (keystrokes: Keystroke[], stats: TypingStats) => void
+  onSkip?: () => void
   footer?: ReactNode
 }
 
-export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
+export function TypingRun({
+  content,
+  onFinish,
+  onSkip,
+  footer,
+}: TypingRunProps) {
   const engine = useTypingEngine(content)
   const inputRef = useRef<HTMLInputElement>(null)
+  const tabHeldRef = useRef(false)
+  const [focused, setFocused] = useState(false)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -29,7 +39,25 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.status])
 
+  const wpmSeries = useMemo(
+    () =>
+      engine.status === 'finished'
+        ? computeWpmSeries(content, engine.keystrokes)
+        : [],
+    [engine.status, content, engine.keystrokes],
+  )
+
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      tabHeldRef.current = true
+      return
+    }
+    if (e.key === 'Enter' && tabHeldRef.current) {
+      e.preventDefault()
+      onSkip?.()
+      return
+    }
     if (e.key !== 'Backspace' && e.key.length !== 1) return
     e.preventDefault()
     engine.handleKeyDown({
@@ -39,29 +67,58 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
     })
   }
 
+  function handleKeyUp(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Tab') tabHeldRef.current = false
+  }
+
+  const showOverlay = !focused && engine.status !== 'finished'
+
   return (
     <div className="typing-test">
-      {engine.status === 'idle' && (
-        <p className="typing-status typing-status--hint">
-          Start typing to begin
-        </p>
-      )}
+      <div className="typing-hint-slot">
+        {engine.status === 'idle' && !showOverlay && (
+          <p className="typing-status typing-status--hint">
+            Start typing to begin
+          </p>
+        )}
+      </div>
 
-      <div className="typing-text" onClick={() => inputRef.current?.focus()}>
-        {content.split('').map((char, i) => (
-          <span
-            key={i}
-            className={`typing-char typing-char--${engine.charStatuses[i]}`}
+      <div
+        className={
+          showOverlay
+            ? 'typing-text-wrap typing-text-wrap--blurred'
+            : 'typing-text-wrap'
+        }
+        onClick={() => inputRef.current?.focus()}
+      >
+        <div className="typing-text">
+          {content.split('').map((char, i) => (
+            <span
+              key={i}
+              className={`typing-char typing-char--${engine.charStatuses[i]}`}
+            >
+              {char}
+            </span>
+          ))}
+        </div>
+        {showOverlay && (
+          <button
+            type="button"
+            className="typing-overlay"
+            onClick={() => inputRef.current?.focus()}
           >
-            {char}
-          </span>
-        ))}
+            Click to focus
+          </button>
+        )}
       </div>
 
       <input
         ref={inputRef}
         className="typing-input"
         onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         disabled={engine.status === 'finished'}
         autoFocus
         autoComplete="off"
@@ -73,7 +130,7 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
 
       {engine.status === 'finished' && engine.stats && (
         <>
-          <div className="typing-results">
+          <div className="typing-results typing-results--enter">
             <div className="typing-stat typing-stat--primary">
               <span className="typing-stat__value">
                 {Math.round(engine.stats.wpm)}
@@ -99,6 +156,7 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
               <span className="typing-stat__label">errors</span>
             </div>
           </div>
+          <WpmChart points={wpmSeries} />
           {footer}
         </>
       )}

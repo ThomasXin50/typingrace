@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { TypingRun } from './TypingRun'
@@ -49,5 +49,53 @@ describe('TypingRun', () => {
     await user.type(screen.getByLabelText('Typing input'), 'ab')
 
     expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument()
+  })
+
+  it('shows a "click to focus" overlay when the input loses focus mid-run, and clearing it refocuses', async () => {
+    render(<TypingRun content="abcdef" />)
+    const input = screen.getByLabelText('Typing input')
+    const user = userEvent.setup()
+
+    await user.type(input, 'ab')
+    expect(screen.queryByText('Click to focus')).not.toBeInTheDocument()
+
+    fireEvent.blur(input)
+    expect(screen.getByText('Click to focus')).toBeInTheDocument()
+
+    await user.click(screen.getByText('Click to focus'))
+    expect(screen.queryByText('Click to focus')).not.toBeInTheDocument()
+    expect(input).toHaveFocus()
+  })
+
+  it('does not show the focus overlay once the run is finished', async () => {
+    render(<TypingRun content="ab" />)
+    const input = screen.getByLabelText('Typing input')
+    const user = userEvent.setup()
+
+    await user.type(input, 'ab')
+    fireEvent.blur(input)
+
+    expect(screen.queryByText('Click to focus')).not.toBeInTheDocument()
+  })
+
+  it('calls onSkip when Tab is held and Enter is pressed', () => {
+    const onSkip = vi.fn()
+    render(<TypingRun content="abc" onSkip={onSkip} />)
+    const input = screen.getByLabelText('Typing input')
+
+    fireEvent.keyDown(input, { key: 'Tab' })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onSkip).toHaveBeenCalledOnce()
+  })
+
+  it('does not call onSkip for Enter alone, without Tab held', () => {
+    const onSkip = vi.fn()
+    render(<TypingRun content="abc" onSkip={onSkip} />)
+    const input = screen.getByLabelText('Typing input')
+
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onSkip).not.toHaveBeenCalled()
   })
 })
