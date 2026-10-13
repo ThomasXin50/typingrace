@@ -1,9 +1,11 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import {
   useTypingEngine,
   type Keystroke,
   type TypingStats,
 } from './useTypingEngine'
+import { WpmChart } from './WpmChart'
+import { computeWpmSeries } from './wpmSeries'
 import './typing.css'
 
 interface TypingRunProps {
@@ -28,6 +30,14 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
     // locks out further events after), so only that transition matters here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.status])
+
+  const wpmSeries = useMemo(
+    () =>
+      engine.status === 'finished'
+        ? computeWpmSeries(content, engine.keystrokes)
+        : [],
+    [engine.status, content, engine.keystrokes],
+  )
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key !== 'Backspace' && e.key.length !== 1) return
@@ -73,7 +83,7 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
 
       {engine.status === 'finished' && engine.stats && (
         <>
-          <div className="typing-results">
+          <div className="typing-results typing-results--enter">
             <div className="typing-stat typing-stat--primary">
               <span className="typing-stat__value">
                 {Math.round(engine.stats.wpm)}
@@ -99,6 +109,7 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
               <span className="typing-stat__label">errors</span>
             </div>
           </div>
+          <WpmChart points={wpmSeries} />
           {footer}
         </>
       )}
