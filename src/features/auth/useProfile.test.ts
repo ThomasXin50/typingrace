@@ -27,10 +27,10 @@ describe('useProfile', () => {
     vi.clearAllMocks()
   })
 
-  it('signs in anonymously when there is no existing session', async () => {
+  it('signs in anonymously when there is no existing session, marking the profile anonymous', async () => {
     mocks.getSession.mockResolvedValue({ data: { session: null } })
     mocks.signInAnonymously.mockResolvedValue({
-      data: { user: { id: 'user-1' } },
+      data: { user: { id: 'user-1', is_anonymous: true } },
       error: null,
     })
     mocks.single.mockResolvedValue({
@@ -46,13 +46,14 @@ describe('useProfile', () => {
     expect(result.current.profile).toEqual({
       id: 'user-1',
       username: 'user_abc123',
+      isAnonymous: true,
     })
     expect(result.current.error).toBeNull()
   })
 
-  it('reuses an existing session without signing in again', async () => {
+  it('reuses an existing non-anonymous session without signing in again', async () => {
     mocks.getSession.mockResolvedValue({
-      data: { session: { user: { id: 'user-2' } } },
+      data: { session: { user: { id: 'user-2', is_anonymous: false } } },
     })
     mocks.single.mockResolvedValue({
       data: { id: 'user-2', username: 'alice' },
@@ -64,7 +65,27 @@ describe('useProfile', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
 
     expect(mocks.signInAnonymously).not.toHaveBeenCalled()
-    expect(result.current.profile).toEqual({ id: 'user-2', username: 'alice' })
+    expect(result.current.profile).toEqual({
+      id: 'user-2',
+      username: 'alice',
+      isAnonymous: false,
+    })
+  })
+
+  it('reuses an existing anonymous session, marking the profile anonymous', async () => {
+    mocks.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'user-4', is_anonymous: true } } },
+    })
+    mocks.single.mockResolvedValue({
+      data: { id: 'user-4', username: 'user_def456' },
+      error: null,
+    })
+
+    const { result } = renderHook(() => useProfile())
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.profile?.isAnonymous).toBe(true)
   })
 
   it('surfaces an error when the profile fetch fails', async () => {

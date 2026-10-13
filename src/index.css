@@ -30,6 +30,33 @@
   }
 }
 
+/* Explicit overrides from the settings page, applied via useTheme(). These
+   win over the prefers-color-scheme block above regardless of source order
+   - an attribute selector is more specific than a bare :root. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --text: #181b20;
+  --text-muted: #5a5e66;
+  --bg: #fbfaf7;
+  --surface: #f3f2ed;
+  --border: #d0cec7;
+  --accent: #9c5600;
+  --correct: #1e7729;
+  --incorrect: #c52b30;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #e6e8ec;
+  --text-muted: #9498a1;
+  --bg: #0d0f15;
+  --surface: #171b21;
+  --border: #2f333b;
+  --accent: #edc812;
+  --correct: #75d079;
+  --incorrect: #fd736d;
+}
+
 body {
   margin: 0;
 }
@@ -75,4 +102,54 @@ a {
 .stat-tile__label {
   font-size: 0.875rem;
   color: var(--text-muted);
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.stat-row-empty {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  margin: 0 0 2.5rem;
+}
+
+.btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.btn__shortcut {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.8125rem;
 }

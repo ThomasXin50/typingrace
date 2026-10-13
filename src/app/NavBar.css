@@ -39,4 +39,10 @@
   font-size: 0.875rem;
   color: var(--text-muted);
   font-family: var(--font-mono);
+  text-decoration: none;
+}
+
+.nav-bar__user:hover,
+.nav-bar__user--active {
+  color: var(--accent);
 }

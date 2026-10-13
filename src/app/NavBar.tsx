@@ -10,9 +10,12 @@ const destinations = [
 
 interface NavBarProps {
   username?: string
+  isAnonymous?: boolean
 }
 
-export function NavBar({ username }: NavBarProps) {
+export function NavBar({ username, isAnonymous }: NavBarProps) {
+  const displayName = isAnonymous ? 'Guest' : username
+
   return (
     <header className="nav-bar">
       <NavLink to="/" className="nav-bar__brand" end>
@@ -31,7 +34,16 @@ export function NavBar({ username }: NavBarProps) {
           </NavLink>
         ))}
       </nav>
-      {username && <span className="nav-bar__user">{username}</span>}
+      {displayName && (
+        <NavLink
+          to="/profile"
+          className={({ isActive }) =>
+            isActive ? 'nav-bar__user nav-bar__user--active' : 'nav-bar__user'
+          }
+        >
+          {displayName}
+        </NavLink>
+      )}
     </header>
   )
 }

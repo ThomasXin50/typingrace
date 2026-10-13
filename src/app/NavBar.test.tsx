@@ -33,14 +33,31 @@ describe('NavBar', () => {
     )
   })
 
-  it('shows the signed-in username when provided', () => {
+  it('shows the signed-in username, linking to the profile page', () => {
     render(
       <MemoryRouter>
-        <NavBar username="alice" />
+        <NavBar username="alice" isAnonymous={false} />
       </MemoryRouter>,
     )
 
-    expect(screen.getByText('alice')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'alice' })).toHaveAttribute(
+      'href',
+      '/profile',
+    )
+  })
+
+  it('shows "Guest" instead of the generated username for anonymous sessions', () => {
+    render(
+      <MemoryRouter>
+        <NavBar username="user_abc123" isAnonymous={true} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByRole('link', { name: 'Guest' })).toHaveAttribute(
+      'href',
+      '/profile',
+    )
+    expect(screen.queryByText('user_abc123')).not.toBeInTheDocument()
   })
 
   it('renders without a username while auth is still resolving', () => {
