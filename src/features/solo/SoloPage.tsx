@@ -25,12 +25,13 @@ export function SoloPage() {
   }
 
   return (
-    <TypingRun
-      key={text!.id}
-      content={text!.content}
-      onFinish={handleFinish}
-      footer={
-        <div className="solo-footer">
+    <div className="solo-run">
+      <TypingRun
+        key={text!.id}
+        content={text!.content}
+        onFinish={handleFinish}
+        onSkip={requestNext}
+        footer={
           <p className="typing-save-status">
             {submitRun.submitting && 'Saving…'}
             {submitRun.error && `Not saved: ${submitRun.error}`}
@@ -41,11 +42,11 @@ export function SoloPage() {
             {submitRun.result?.status === 'rejected' &&
               'Not counted — this run looked automated.'}
           </p>
-          <button type="button" className="typing-next" onClick={requestNext}>
-            Next text
-          </button>
-        </div>
-      }
-    />
+        }
+      />
+      <button type="button" className="typing-next" onClick={requestNext}>
+        Next text <span className="typing-next__shortcut">(tab + enter)</span>
+      </button>
+    </div>
   )
 }

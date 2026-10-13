@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { WpmChart } from './WpmChart'
 
@@ -10,7 +9,7 @@ describe('WpmChart', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders an accessible chart with a table-view twin', async () => {
+  it('renders an accessible chart with a screen-reader data summary', () => {
     const points = [
       { timeSec: 1, wpm: 80 },
       { timeSec: 2, wpm: 95 },
@@ -22,18 +21,9 @@ describe('WpmChart', () => {
     expect(
       screen.getByRole('img', { name: /wpm over time/i }),
     ).toBeInTheDocument()
-
-    // The table view is the accessibility twin - not rendered until asked for.
-    expect(screen.queryByRole('table')).not.toBeInTheDocument()
-
-    const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: /view as table/i }))
-
-    const table = screen.getByRole('table')
-    expect(table).toBeInTheDocument()
-    expect(screen.getByText('80')).toBeInTheDocument()
-    expect(screen.getByText('95')).toBeInTheDocument()
-    expect(screen.getByText('90')).toBeInTheDocument()
+    expect(
+      screen.getByText(/80 wpm at 1s.*95 wpm at 2s.*90 wpm at 3s/),
+    ).toBeInTheDocument()
   })
 
   it('does not throw when hovered before layout (zero-size rect)', () => {
@@ -49,6 +39,6 @@ describe('WpmChart', () => {
     // jsdom's unlayout'd elements report a zero-size rect; the handler
     // should no-op rather than show a nonsensical index-0 tooltip.
     expect(() => fireEvent.pointerMove(svg, { clientX: 403 })).not.toThrow()
-    expect(screen.queryByText(/wpm at \d+s/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 })

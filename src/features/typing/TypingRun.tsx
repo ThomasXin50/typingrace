@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   useTypingEngine,
   type Keystroke,
@@ -11,12 +11,20 @@ import './typing.css'
 interface TypingRunProps {
   content: string
   onFinish?: (keystrokes: Keystroke[], stats: TypingStats) => void
+  onSkip?: () => void
   footer?: ReactNode
 }
 
-export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
+export function TypingRun({
+  content,
+  onFinish,
+  onSkip,
+  footer,
+}: TypingRunProps) {
   const engine = useTypingEngine(content)
   const inputRef = useRef<HTMLInputElement>(null)
+  const tabHeldRef = useRef(false)
+  const [focused, setFocused] = useState(false)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -40,6 +48,16 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
   )
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      tabHeldRef.current = true
+      return
+    }
+    if (e.key === 'Enter' && tabHeldRef.current) {
+      e.preventDefault()
+      onSkip?.()
+      return
+    }
     if (e.key !== 'Backspace' && e.key.length !== 1) return
     e.preventDefault()
     engine.handleKeyDown({
@@ -49,29 +67,56 @@ export function TypingRun({ content, onFinish, footer }: TypingRunProps) {
     })
   }
 
+  function handleKeyUp(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Tab') tabHeldRef.current = false
+  }
+
+  const showOverlay = !focused && engine.status !== 'finished'
+
   return (
     <div className="typing-test">
-      {engine.status === 'idle' && (
+      {engine.status === 'idle' && !showOverlay && (
         <p className="typing-status typing-status--hint">
           Start typing to begin
         </p>
       )}
 
-      <div className="typing-text" onClick={() => inputRef.current?.focus()}>
-        {content.split('').map((char, i) => (
-          <span
-            key={i}
-            className={`typing-char typing-char--${engine.charStatuses[i]}`}
+      <div
+        className={
+          showOverlay
+            ? 'typing-text-wrap typing-text-wrap--blurred'
+            : 'typing-text-wrap'
+        }
+        onClick={() => inputRef.current?.focus()}
+      >
+        <div className="typing-text">
+          {content.split('').map((char, i) => (
+            <span
+              key={i}
+              className={`typing-char typing-char--${engine.charStatuses[i]}`}
+            >
+              {char}
+            </span>
+          ))}
+        </div>
+        {showOverlay && (
+          <button
+            type="button"
+            className="typing-overlay"
+            onClick={() => inputRef.current?.focus()}
           >
-            {char}
-          </span>
-        ))}
+            Click to focus
+          </button>
+        )}
       </div>
 
       <input
         ref={inputRef}
         className="typing-input"
         onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         disabled={engine.status === 'finished'}
         autoFocus
         autoComplete="off"

@@ -58,6 +58,11 @@ export function PracticePage() {
 
   const content = override ?? text!.content
 
+  function handleNext() {
+    setOverride(null)
+    requestNext()
+  }
+
   return (
     <div className="practice-run">
       <button
@@ -67,22 +72,11 @@ export function PracticePage() {
       >
         Practice custom text instead
       </button>
-      <TypingRun
-        key={content}
-        content={content}
-        footer={
-          <button
-            type="button"
-            className="typing-next"
-            onClick={() => {
-              setOverride(null)
-              requestNext()
-            }}
-          >
-            Next random text
-          </button>
-        }
-      />
+      <TypingRun key={content} content={content} onSkip={handleNext} />
+      <button type="button" className="typing-next" onClick={handleNext}>
+        Next random text{' '}
+        <span className="typing-next__shortcut">(tab + enter)</span>
+      </button>
     </div>
   )
 }

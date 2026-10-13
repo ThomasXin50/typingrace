@@ -20,10 +20,10 @@ interface WpmChartProps {
 }
 
 export function WpmChart({ points }: WpmChartProps) {
-  const [showTable, setShowTable] = useState(false)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
   const titleId = useId()
+  const descId = useId()
 
   if (points.length === 0) return null
 
@@ -52,100 +52,79 @@ export function WpmChart({ points }: WpmChartProps) {
 
   return (
     <div className="wpm-chart">
-      <div className="wpm-chart__header">
-        <h3 className="wpm-chart__title" id={titleId}>
-          wpm over time
-        </h3>
-        <button
-          type="button"
-          className="wpm-chart__table-toggle"
-          onClick={() => setShowTable((v) => !v)}
-        >
-          {showTable ? 'View as chart' : 'View as table'}
-        </button>
-      </div>
+      <h3 className="wpm-chart__title" id={titleId}>
+        wpm over time
+      </h3>
 
-      {showTable ? (
-        <table className="wpm-chart__table">
-          <thead>
-            <tr>
-              <th scope="col">Second</th>
-              <th scope="col">wpm</th>
-            </tr>
-          </thead>
-          <tbody>
-            {points.map((p) => (
-              <tr key={p.timeSec}>
-                <td>{p.timeSec}</td>
-                <td>{Math.round(p.wpm)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <svg
-          ref={svgRef}
-          className="wpm-chart__svg"
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          role="img"
-          aria-labelledby={titleId}
-          onPointerMove={handlePointerMove}
-          onPointerLeave={() => setHoverIndex(null)}
-        >
-          {[0, 0.5, 1].map((frac) => (
-            <line
-              key={frac}
-              className="wpm-chart__gridline"
-              x1={PAD_LEFT}
-              x2={WIDTH - PAD_RIGHT}
-              y1={PAD_TOP + INNER_HEIGHT * (1 - frac)}
-              y2={PAD_TOP + INNER_HEIGHT * (1 - frac)}
-            />
-          ))}
-
-          {[0, 0.5, 1].map((frac) => (
-            <text
-              key={frac}
-              className="wpm-chart__tick-label"
-              x={PAD_LEFT - 8}
-              y={PAD_TOP + INNER_HEIGHT * (1 - frac)}
-              textAnchor="end"
-              dominantBaseline="middle"
-            >
-              {Math.round(maxWpm * frac)}
-            </text>
-          ))}
-
-          <path className="wpm-chart__line" d={linePath} />
-
-          <circle
-            className="wpm-chart__end-dot"
-            cx={x(last.timeSec)}
-            cy={y(last.wpm)}
-            r={5}
+      <svg
+        ref={svgRef}
+        className="wpm-chart__svg"
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        role="img"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        onPointerMove={handlePointerMove}
+        onPointerLeave={() => setHoverIndex(null)}
+      >
+        {[0, 0.5, 1].map((frac) => (
+          <line
+            key={frac}
+            className="wpm-chart__gridline"
+            x1={PAD_LEFT}
+            x2={WIDTH - PAD_RIGHT}
+            y1={PAD_TOP + INNER_HEIGHT * (1 - frac)}
+            y2={PAD_TOP + INNER_HEIGHT * (1 - frac)}
           />
+        ))}
 
-          {hovered && (
-            <>
-              <line
-                className="wpm-chart__crosshair"
-                x1={x(hovered.timeSec)}
-                x2={x(hovered.timeSec)}
-                y1={PAD_TOP}
-                y2={PAD_TOP + INNER_HEIGHT}
-              />
-              <circle
-                className="wpm-chart__hover-dot"
-                cx={x(hovered.timeSec)}
-                cy={y(hovered.wpm)}
-                r={5}
-              />
-            </>
-          )}
-        </svg>
-      )}
+        {[0, 0.5, 1].map((frac) => (
+          <text
+            key={frac}
+            className="wpm-chart__tick-label"
+            x={PAD_LEFT - 8}
+            y={PAD_TOP + INNER_HEIGHT * (1 - frac)}
+            textAnchor="end"
+            dominantBaseline="middle"
+          >
+            {Math.round(maxWpm * frac)}
+          </text>
+        ))}
 
-      {hovered && !showTable && (
+        <path className="wpm-chart__line" d={linePath} />
+
+        <circle
+          className="wpm-chart__end-dot"
+          cx={x(last.timeSec)}
+          cy={y(last.wpm)}
+          r={5}
+        />
+
+        {hovered && (
+          <>
+            <line
+              className="wpm-chart__crosshair"
+              x1={x(hovered.timeSec)}
+              x2={x(hovered.timeSec)}
+              y1={PAD_TOP}
+              y2={PAD_TOP + INNER_HEIGHT}
+            />
+            <circle
+              className="wpm-chart__hover-dot"
+              cx={x(hovered.timeSec)}
+              cy={y(hovered.wpm)}
+              r={5}
+            />
+          </>
+        )}
+      </svg>
+
+      <span className="wpm-chart__sr-only" id={descId}>
+        {points
+          .map((p) => `${Math.round(p.wpm)} wpm at ${p.timeSec}s`)
+          .join(', ')}
+      </span>
+
+      {hovered && (
         <p className="wpm-chart__tooltip" role="status">
           {Math.round(hovered.wpm)} wpm at {hovered.timeSec}s
         </p>
