@@ -15,6 +15,10 @@ describe('NavBar', () => {
       'href',
       '/',
     )
+    expect(screen.getByRole('link', { name: 'Solo' })).toHaveAttribute(
+      'href',
+      '/solo',
+    )
     expect(screen.getByRole('link', { name: 'Practice' })).toHaveAttribute(
       'href',
       '/practice',

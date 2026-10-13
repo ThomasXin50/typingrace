@@ -5,7 +5,8 @@ import { useProfile } from './features/auth/useProfile'
 import { HomePage } from './features/home/HomePage'
 import { LeaderboardPage } from './features/leaderboard/LeaderboardPage'
 import { MultiplayerPage } from './features/multiplayer/MultiplayerPage'
-import { SoloTypingTest } from './features/typing/SoloTypingTest'
+import { PracticePage } from './features/practice/PracticePage'
+import { SoloPage } from './features/solo/SoloPage'
 
 function App() {
   const { profile, loading, error } = useProfile()
@@ -23,7 +24,8 @@ function App() {
         {!loading && !error && (
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path="/practice" element={<SoloTypingTest />} />
+            <Route path="/solo" element={<SoloPage />} />
+            <Route path="/practice" element={<PracticePage />} />
             <Route path="/leaderboards" element={<LeaderboardPage />} />
             <Route path="/multiplayer" element={<MultiplayerPage />} />
           </Routes>

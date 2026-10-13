@@ -3,9 +3,16 @@ import './home.css'
 
 const destinations = [
   {
+    to: '/solo',
+    title: 'Solo',
+    description:
+      'Type a random approved text. Validated and counted toward your stats and the leaderboard.',
+  },
+  {
     to: '/practice',
     title: 'Practice',
-    description: 'Type a random text solo. See your wpm, accuracy, and errors.',
+    description:
+      'Type any text - curated or your own - fully offline. Nothing is saved.',
   },
   {
     to: '/leaderboards',

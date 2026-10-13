@@ -4,13 +4,17 @@ import { describe, expect, it } from 'vitest'
 import { HomePage } from './HomePage'
 
 describe('HomePage', () => {
-  it('links to practice, leaderboards, and multiplayer', () => {
+  it('links to solo, practice, leaderboards, and multiplayer', () => {
     render(
       <MemoryRouter>
         <HomePage />
       </MemoryRouter>,
     )
 
+    expect(screen.getByRole('link', { name: /solo/i })).toHaveAttribute(
+      'href',
+      '/solo',
+    )
     expect(screen.getByRole('link', { name: /practice/i })).toHaveAttribute(
       'href',
       '/practice',
