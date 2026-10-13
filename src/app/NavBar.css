@@ -10,6 +10,7 @@
 .nav-bar__brand {
   font-size: 1.0625rem;
   font-weight: 600;
+  letter-spacing: -0.01em;
   text-decoration: none;
   margin-right: auto;
 }
@@ -30,7 +31,7 @@
 }
 
 .nav-bar__link--active {
-  color: var(--text);
+  color: var(--accent);
   font-weight: 600;
 }
 
