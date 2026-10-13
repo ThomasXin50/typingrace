@@ -27,15 +27,6 @@
 .typing-text-wrap {
   position: relative;
   cursor: text;
-  display: flex;
-  flex-direction: column;
-  /* A floor of two lines, so short texts don't pull the next-text button up
-     to an unstable position; longer texts still grow past it. Anchoring the
-     text to the bottom of that floor (not the top) keeps the gap after it
-     constant - padding the box would otherwise land *below* short text and
-     shrink the visible gap compared to text that fills or exceeds the floor. */
-  justify-content: flex-end;
-  min-height: 4.8rem;
 }
 
 .typing-text {
