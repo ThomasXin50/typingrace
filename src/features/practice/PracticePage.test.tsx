@@ -99,6 +99,29 @@ describe('PracticePage', () => {
     expect(requestNext).toHaveBeenCalledOnce()
   })
 
+  it('resets to a fresh run when "Next random text" lands on the same text (e.g. only one approved text exists)', async () => {
+    // Simulates the single-text-pool case: requestNext() is called but the
+    // mocked text value never changes, same as useRandomText would behave
+    // with only one approved text.
+    mocks.useRandomText.mockReturnValue({
+      text: { id: 'curated-1', content: 'ab' },
+      loading: false,
+      error: null,
+      requestNext: vi.fn(),
+    })
+
+    render(<PracticePage />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Typing input'), 'ab')
+    await waitFor(() => expect(screen.getByText('wpm')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: /next random text/i }))
+
+    expect(screen.getByText(/start typing to begin/i)).toBeInTheDocument()
+    expect(screen.queryByText('wpm')).not.toBeInTheDocument()
+  })
+
   it('wires the tab+enter skip shortcut to the same next-text action', () => {
     const requestNext = vi.fn()
     mocks.useRandomText.mockReturnValue({

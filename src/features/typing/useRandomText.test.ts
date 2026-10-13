@@ -81,4 +81,43 @@ describe('useRandomText', () => {
 
     expect(result.current.text?.id).toBe('b')
   })
+
+  it('requestNext advances selectionKey even with only one text available', async () => {
+    mocks.eq.mockResolvedValue({
+      data: [{ id: 'a', content: 'text a' }],
+      error: null,
+    })
+
+    const { result } = renderHook(() => useRandomText())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    const keyAfterLoad = result.current.selectionKey
+
+    act(() => result.current.requestNext())
+
+    // The text itself is unavoidably the same (it's the only one), but the
+    // selection key must still change so callers can force a fresh run.
+    expect(result.current.text?.id).toBe('a')
+    expect(result.current.selectionKey).not.toBe(keyAfterLoad)
+  })
+
+  it('selectionKey advances on every requestNext call, not just when the text changes', async () => {
+    mocks.eq.mockResolvedValue({
+      data: [
+        { id: 'a', content: 'text a' },
+        { id: 'b', content: 'text b' },
+      ],
+      error: null,
+    })
+
+    const { result } = renderHook(() => useRandomText())
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    const keyAfterLoad = result.current.selectionKey
+
+    act(() => result.current.requestNext())
+    const keyAfterFirstNext = result.current.selectionKey
+    act(() => result.current.requestNext())
+
+    expect(keyAfterFirstNext).not.toBe(keyAfterLoad)
+    expect(result.current.selectionKey).not.toBe(keyAfterFirstNext)
+  })
 })

@@ -10,6 +10,12 @@ interface UseRandomTextResult {
   text: TypingText | null
   loading: boolean
   error: string | null
+  /** Bumps on every new selection, even when the pool has only one text and
+   * the "new" pick is identical to the last one. React bails out of
+   * re-rendering on an unchanged `text` value (same id/content), so callers
+   * needing to force a fresh run (e.g. as a remount key) should use this
+   * instead of `text.id` or `text.content`. */
+  selectionKey: number
   requestNext: () => void
 }
 
@@ -22,6 +28,7 @@ function pickRandom(texts: TypingText[], excludeId?: string): TypingText {
 export function useRandomText(): UseRandomTextResult {
   const [texts, setTexts] = useState<TypingText[] | null>(null)
   const [text, setText] = useState<TypingText | null>(null)
+  const [selectionKey, setSelectionKey] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,6 +50,7 @@ export function useRandomText(): UseRandomTextResult {
       } else {
         setTexts(data)
         setText(pickRandom(data))
+        setSelectionKey((k) => k + 1)
       }
       setLoading(false)
     }
@@ -57,7 +65,8 @@ export function useRandomText(): UseRandomTextResult {
   function requestNext() {
     if (!texts || texts.length === 0) return
     setText(pickRandom(texts, text?.id))
+    setSelectionKey((k) => k + 1)
   }
 
-  return { text, loading, error, requestNext }
+  return { text, loading, error, selectionKey, requestNext }
 }

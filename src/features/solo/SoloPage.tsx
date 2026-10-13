@@ -5,7 +5,7 @@ import type { Keystroke } from '../typing/useTypingEngine'
 import './solo.css'
 
 export function SoloPage() {
-  const { text, loading, error, requestNext } = useRandomText()
+  const { text, loading, error, selectionKey, requestNext } = useRandomText()
   const submitRun = useSubmitRun()
 
   if (loading) {
@@ -27,7 +27,7 @@ export function SoloPage() {
   return (
     <div className="solo-run">
       <TypingRun
-        key={text!.id}
+        key={selectionKey}
         content={text!.content}
         onFinish={handleFinish}
         onSkip={requestNext}
