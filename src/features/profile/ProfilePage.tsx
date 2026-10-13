@@ -87,7 +87,6 @@ export function ProfilePage() {
 
       <section>
         <h2>Settings</h2>
-        <hr className="profile-divider" />
 
         <div className="profile-field">
           <label htmlFor="profile-username">Username</label>
