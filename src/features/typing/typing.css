@@ -13,11 +13,14 @@
 .typing-hint-slot {
   /* Reserved regardless of whether the hint is shown, so it disappearing
      never shifts the text below it. */
-  height: 1.25rem;
+  height: 1.5rem;
 }
 
 .typing-status--hint {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   margin: 0;
 }
 
