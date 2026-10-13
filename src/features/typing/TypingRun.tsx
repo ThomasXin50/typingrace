@@ -75,11 +75,13 @@ export function TypingRun({
 
   return (
     <div className="typing-test">
-      {engine.status === 'idle' && !showOverlay && (
-        <p className="typing-status typing-status--hint">
-          Start typing to begin
-        </p>
-      )}
+      <div className="typing-hint-slot">
+        {engine.status === 'idle' && !showOverlay && (
+          <p className="typing-status typing-status--hint">
+            Start typing to begin
+          </p>
+        )}
+      </div>
 
       <div
         className={
