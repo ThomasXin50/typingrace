@@ -1,3 +1,17 @@
+.home-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.home-stats-empty {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  margin: 0 0 2.5rem;
+}
+
 .home-list {
   list-style: none;
   margin: 0;

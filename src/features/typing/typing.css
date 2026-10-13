@@ -137,32 +137,6 @@
   }
 }
 
-.typing-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.typing-stat__value {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.typing-stat--primary .typing-stat__value {
-  font-size: 3rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--accent);
-}
-
-.typing-stat__label {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-}
-
 .typing-next {
   background: none;
   border: 1px solid var(--border);

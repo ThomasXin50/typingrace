@@ -10,6 +10,10 @@ vi.mock('./features/auth/useProfile', () => ({
   useProfile: mocks.useProfile,
 }))
 
+vi.mock('./features/home/useHomeStats', () => ({
+  useHomeStats: () => ({ stats: null, loading: false, error: null }),
+}))
+
 vi.mock('./features/solo/SoloPage', () => ({
   SoloPage: () => <div>solo page</div>,
 }))
