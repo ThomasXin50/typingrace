@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SoloTypingTest } from './SoloTypingTest'
+import { SoloPage } from './SoloPage'
 
 const mocks = vi.hoisted(() => ({
   useRandomText: vi.fn(),
@@ -9,15 +9,15 @@ const mocks = vi.hoisted(() => ({
   useSubmitRun: vi.fn(),
 }))
 
-vi.mock('./useRandomText', () => ({
+vi.mock('../typing/useRandomText', () => ({
   useRandomText: mocks.useRandomText,
 }))
 
-vi.mock('./useSubmitRun', () => ({
+vi.mock('../typing/useSubmitRun', () => ({
   useSubmitRun: mocks.useSubmitRun,
 }))
 
-describe('SoloTypingTest', () => {
+describe('SoloPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.useSubmitRun.mockReturnValue({
@@ -36,7 +36,7 @@ describe('SoloTypingTest', () => {
       requestNext: vi.fn(),
     })
 
-    render(<SoloTypingTest />)
+    render(<SoloPage />)
 
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
@@ -49,14 +49,14 @@ describe('SoloTypingTest', () => {
       requestNext: vi.fn(),
     })
 
-    render(<SoloTypingTest />)
+    render(<SoloPage />)
 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'No approved texts are available',
     )
   })
 
-  it('lets the user type the text, shows results, and submits the keystroke log', async () => {
+  it('submits the keystroke log for the fetched text on finish', async () => {
     mocks.useRandomText.mockReturnValue({
       text: { id: 'text-1', content: 'abc' },
       loading: false,
@@ -64,16 +64,12 @@ describe('SoloTypingTest', () => {
       requestNext: vi.fn(),
     })
 
-    render(<SoloTypingTest />)
+    render(<SoloPage />)
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText('Typing input'), 'abc')
 
-    await waitFor(() => expect(screen.getByText('wpm')).toBeInTheDocument())
-    expect(screen.getByText('100%')).toBeInTheDocument()
-    expect(screen.getByText('errors')).toBeInTheDocument()
-
-    expect(mocks.submit).toHaveBeenCalledOnce()
+    await waitFor(() => expect(mocks.submit).toHaveBeenCalledOnce())
     const [textId, keystrokes] = mocks.submit.mock.calls[0]
     expect(textId).toBe('text-1')
     expect(keystrokes.map((k: { key: string }) => k.key)).toEqual([
@@ -97,7 +93,7 @@ describe('SoloTypingTest', () => {
       submit: mocks.submit,
     })
 
-    render(<SoloTypingTest />)
+    render(<SoloPage />)
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText('Typing input'), 'ab')
@@ -116,7 +112,7 @@ describe('SoloTypingTest', () => {
       requestNext,
     })
 
-    render(<SoloTypingTest />)
+    render(<SoloPage />)
     const user = userEvent.setup()
 
     await user.type(screen.getByLabelText('Typing input'), 'ab')

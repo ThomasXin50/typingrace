@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import './NavBar.css'
 
 const destinations = [
+  { to: '/solo', label: 'Solo' },
   { to: '/practice', label: 'Practice' },
   { to: '/leaderboards', label: 'Leaderboards' },
   { to: '/multiplayer', label: 'Multiplayer' },

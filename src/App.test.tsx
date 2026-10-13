@@ -10,8 +10,12 @@ vi.mock('./features/auth/useProfile', () => ({
   useProfile: mocks.useProfile,
 }))
 
-vi.mock('./features/typing/SoloTypingTest', () => ({
-  SoloTypingTest: () => <div>typing test</div>,
+vi.mock('./features/solo/SoloPage', () => ({
+  SoloPage: () => <div>solo page</div>,
+}))
+
+vi.mock('./features/practice/PracticePage', () => ({
+  PracticePage: () => <div>practice page</div>,
 }))
 
 vi.mock('./features/leaderboard/LeaderboardPage', () => ({
@@ -56,7 +60,7 @@ describe('App', () => {
 
     render(<App />)
 
-    expect(screen.getByText(/type a random text solo/i)).toBeInTheDocument()
+    expect(screen.getByText(/type a random approved text/i)).toBeInTheDocument()
     expect(
       screen.getByText(/fastest verified runs across every typist/i),
     ).toBeInTheDocument()
@@ -68,10 +72,10 @@ describe('App', () => {
       loading: false,
       error: null,
     })
-    window.history.pushState({}, '', '/practice')
+    window.history.pushState({}, '', '/solo')
 
     render(<App />)
 
-    expect(screen.getByText('typing test')).toBeInTheDocument()
+    expect(screen.getByText('solo page')).toBeInTheDocument()
   })
 })
