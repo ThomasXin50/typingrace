@@ -37,3 +37,12 @@ body {
 button {
   font-family: inherit;
 }
+
+a {
+  color: inherit;
+}
+
+.page-status {
+  color: var(--text-muted);
+  font-size: 1.125rem;
+}

@@ -1,0 +1,41 @@
+.nav-bar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding-bottom: 1.5rem;
+  margin-bottom: 2.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-bar__brand {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-decoration: none;
+  margin-right: auto;
+}
+
+.nav-bar__links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-bar__link {
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.nav-bar__link:hover {
+  color: var(--text);
+}
+
+.nav-bar__link--active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.nav-bar__user {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}

@@ -1,24 +1,5 @@
 .app {
-  max-width: 70ch;
+  max-width: 56rem;
   margin: 0 auto;
   padding: 2rem 1.5rem;
-}
-
-.app-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-bottom: 2.5rem;
-}
-
-.app-header h1 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.app-header__user {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
 }
