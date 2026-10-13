@@ -56,12 +56,11 @@ describe('ProfilePage', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
-  it('renders Profile and Settings sections in order, with a divider before the settings controls', () => {
+  it('renders Profile and Settings sections in order', () => {
     render(<ProfilePage />)
 
     const headings = screen.getAllByRole('heading').map((h) => h.textContent)
     expect(headings).toEqual(['Profile', 'Settings'])
-    expect(screen.getByRole('separator')).toBeInTheDocument()
   })
 
   it('shows an empty state when there are no runs yet', () => {

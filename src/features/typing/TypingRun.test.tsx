@@ -98,4 +98,38 @@ describe('TypingRun', () => {
 
     expect(onSkip).not.toHaveBeenCalled()
   })
+
+  it('an externally-owned tabHeldRef keeps "Tab held" true across a skip remount, so repeated Enters keep working without re-pressing Tab', () => {
+    const onSkip = vi.fn()
+    const tabHeldRef = { current: false }
+    const { rerender } = render(
+      <TypingRun
+        key="run-1"
+        content="abc"
+        onSkip={onSkip}
+        tabHeldRef={tabHeldRef}
+      />,
+    )
+
+    fireEvent.keyDown(screen.getByLabelText('Typing input'), { key: 'Tab' })
+    fireEvent.keyDown(screen.getByLabelText('Typing input'), { key: 'Enter' })
+    expect(onSkip).toHaveBeenCalledOnce()
+
+    // Simulate the parent remounting TypingRun in response to onSkip (as
+    // SoloPage/PracticePage do, keyed by selectionKey/runKey) while the user
+    // is still physically holding Tab down - the same ref object is passed
+    // to the new instance.
+    rerender(
+      <TypingRun
+        key="run-2"
+        content="def"
+        onSkip={onSkip}
+        tabHeldRef={tabHeldRef}
+      />,
+    )
+
+    fireEvent.keyDown(screen.getByLabelText('Typing input'), { key: 'Enter' })
+
+    expect(onSkip).toHaveBeenCalledTimes(2)
+  })
 })

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { TypingRun } from '../typing/TypingRun'
 import { useRandomText } from '../typing/useRandomText'
 import './practice.css'
@@ -8,6 +8,15 @@ export function PracticePage() {
   const [customText, setCustomText] = useState('')
   const [enteringCustom, setEnteringCustom] = useState(false)
   const [override, setOverride] = useState<string | null>(null)
+  // Forces TypingRun to remount on every new run, even when the "new" text
+  // happens to be identical to the last one (e.g. only one approved text is
+  // available, or the same custom text is practiced twice) - keying off the
+  // text/content value itself doesn't change in that case, so React would
+  // otherwise leave the finished run on screen instead of resetting it.
+  const [runKey, setRunKey] = useState(0)
+  // Owned here (not inside TypingRun) so holding Tab survives that remount -
+  // see TypingRun's tabHeldRef prop.
+  const tabHeldRef = useRef(false)
 
   if (loading) {
     return <p className="page-status">Loading a text to type…</p>
@@ -48,6 +57,7 @@ export function PracticePage() {
           onClick={() => {
             setOverride(customText.trim())
             setEnteringCustom(false)
+            setRunKey((k) => k + 1)
           }}
         >
           Practice this text
@@ -61,6 +71,7 @@ export function PracticePage() {
   function handleNext() {
     setOverride(null)
     requestNext()
+    setRunKey((k) => k + 1)
   }
 
   return (
@@ -72,7 +83,12 @@ export function PracticePage() {
       >
         Practice custom text instead
       </button>
-      <TypingRun key={content} content={content} onSkip={handleNext} />
+      <TypingRun
+        key={runKey}
+        content={content}
+        onSkip={handleNext}
+        tabHeldRef={tabHeldRef}
+      />
       <button type="button" className="btn" onClick={handleNext}>
         Next random text <span className="btn__shortcut">(tab + enter)</span>
       </button>

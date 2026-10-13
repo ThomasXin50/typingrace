@@ -13,6 +13,12 @@ interface TypingRunProps {
   onFinish?: (keystrokes: Keystroke[], stats: TypingStats) => void
   onSkip?: () => void
   footer?: ReactNode
+  /** Tracks whether Tab is currently held, for the tab+enter skip shortcut.
+   * Skipping remounts TypingRun with a fresh instance, which would otherwise
+   * lose this mid-hold - pass a ref owned by the parent page (which doesn't
+   * remount) so holding Tab and tapping Enter repeatedly keeps working across
+   * skips. Defaults to an internal ref for standalone use. */
+  tabHeldRef?: { current: boolean }
 }
 
 export function TypingRun({
@@ -20,10 +26,12 @@ export function TypingRun({
   onFinish,
   onSkip,
   footer,
+  tabHeldRef: externalTabHeldRef,
 }: TypingRunProps) {
   const engine = useTypingEngine(content)
   const inputRef = useRef<HTMLInputElement>(null)
-  const tabHeldRef = useRef(false)
+  const internalTabHeldRef = useRef(false)
+  const tabHeldRef = externalTabHeldRef ?? internalTabHeldRef
   const [focused, setFocused] = useState(false)
 
   useEffect(() => {

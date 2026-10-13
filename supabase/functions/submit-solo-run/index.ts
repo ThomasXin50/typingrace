@@ -2,6 +2,7 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'
 import { assessValidation, computeStats, type Keystroke } from './validate.ts'
+import { isWithinCooldown } from './rateLimit.ts'
 
 interface SubmitBody {
   textId: string
@@ -33,6 +34,23 @@ export default {
     const userId = ctx.userClaims?.id
     if (!userId) {
       return Response.json({ error: 'unauthenticated' }, { status: 401 })
+    }
+
+    const { data: lastRun } = await ctx.supabaseAdmin
+      .from('solo_runs')
+      .select('created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const lastSubmittedAt = lastRun ? Date.parse(lastRun.created_at) : null
+
+    if (isWithinCooldown(Date.now(), lastSubmittedAt)) {
+      return Response.json(
+        { error: 'submitting too fast - please wait a moment' },
+        { status: 429 },
+      )
     }
 
     let body: unknown

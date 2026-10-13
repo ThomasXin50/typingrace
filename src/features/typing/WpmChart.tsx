@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import type { WpmPoint } from './wpmSeries'
 import {
   HEIGHT,
@@ -22,14 +22,14 @@ interface WpmChartProps {
 export function WpmChart({ points }: WpmChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement>(null)
+  const pathRef = useRef<SVGPathElement>(null)
+  const [pathLength, setPathLength] = useState<number | null>(null)
   const titleId = useId()
   const descId = useId()
 
-  if (points.length === 0) return null
-
-  const series = withOrigin(points)
-  const maxTime = series[series.length - 1].timeSec
-  const maxWpm = niceMax(Math.max(...series.map((p) => p.wpm)))
+  const series = points.length > 0 ? withOrigin(points) : []
+  const maxTime = series.length > 0 ? series[series.length - 1].timeSec : 0
+  const maxWpm = niceMax(Math.max(0, ...series.map((p) => p.wpm)))
 
   const x = (timeSec: number) => xForTime(timeSec, maxTime)
   const y = (wpm: number) => yForWpm(wpm, maxWpm)
@@ -37,6 +37,20 @@ export function WpmChart({ points }: WpmChartProps) {
   const linePath = series
     .map((p, i) => `${i === 0 ? 'M' : 'L'}${x(p.timeSec)},${y(p.wpm)}`)
     .join(' ')
+
+  // A static stroke-dasharray breaks the draw-in animation once a run's
+  // path (which zigzags with every wpm swing) grows longer than that fixed
+  // budget - the line then stops partway through and never fully draws.
+  // Measuring the real length keeps it correct for any run length. jsdom
+  // doesn't implement getTotalLength, so this is a no-op in tests (the CSS
+  // fallback value applies instead).
+  useLayoutEffect(() => {
+    if (typeof pathRef.current?.getTotalLength === 'function') {
+      setPathLength(pathRef.current.getTotalLength())
+    }
+  }, [linePath])
+
+  if (points.length === 0) return null
 
   const last = points[points.length - 1]
 
@@ -90,7 +104,18 @@ export function WpmChart({ points }: WpmChartProps) {
           </text>
         ))}
 
-        <path className="wpm-chart__line" d={linePath} />
+        <path
+          ref={pathRef}
+          className="wpm-chart__line"
+          d={linePath}
+          style={
+            pathLength !== null
+              ? ({
+                  '--wpm-chart-path-length': pathLength,
+                } as React.CSSProperties)
+              : undefined
+          }
+        />
 
         <circle
           className="wpm-chart__end-dot"

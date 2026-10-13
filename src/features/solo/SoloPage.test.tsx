@@ -33,6 +33,7 @@ describe('SoloPage', () => {
       text: null,
       loading: true,
       error: null,
+      selectionKey: 0,
       requestNext: vi.fn(),
     })
 
@@ -46,6 +47,7 @@ describe('SoloPage', () => {
       text: null,
       loading: false,
       error: 'No approved texts are available',
+      selectionKey: 0,
       requestNext: vi.fn(),
     })
 
@@ -61,6 +63,7 @@ describe('SoloPage', () => {
       text: { id: 'text-1', content: 'abc' },
       loading: false,
       error: null,
+      selectionKey: 0,
       requestNext: vi.fn(),
     })
 
@@ -84,6 +87,7 @@ describe('SoloPage', () => {
       text: { id: 'text-1', content: 'ab' },
       loading: false,
       error: null,
+      selectionKey: 0,
       requestNext: vi.fn(),
     })
     mocks.useSubmitRun.mockReturnValue({
@@ -109,6 +113,7 @@ describe('SoloPage', () => {
       text: { id: 'a', content: 'ab' },
       loading: false,
       error: null,
+      selectionKey: 0,
       requestNext,
     })
 
@@ -127,6 +132,7 @@ describe('SoloPage', () => {
       text: { id: 'a', content: 'ab' },
       loading: false,
       error: null,
+      selectionKey: 0,
       requestNext,
     })
 
@@ -137,5 +143,36 @@ describe('SoloPage', () => {
     fireEvent.keyDown(input, { key: 'Enter' })
 
     expect(requestNext).toHaveBeenCalledOnce()
+  })
+
+  it('resets to a fresh run when selectionKey advances, even if the text itself is unchanged (e.g. only one approved text exists)', async () => {
+    mocks.useRandomText.mockReturnValue({
+      text: { id: 'a', content: 'ab' },
+      loading: false,
+      error: null,
+      selectionKey: 0,
+      requestNext: vi.fn(),
+    })
+
+    const { rerender } = render(<SoloPage />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Typing input'), 'ab')
+    await waitFor(() => expect(screen.getByText('wpm')).toBeInTheDocument())
+
+    // Same text/id as before, but selectionKey advanced - this is exactly
+    // what useRandomText produces when requestNext() is called with only
+    // one approved text in the pool.
+    mocks.useRandomText.mockReturnValue({
+      text: { id: 'a', content: 'ab' },
+      loading: false,
+      error: null,
+      selectionKey: 1,
+      requestNext: vi.fn(),
+    })
+    rerender(<SoloPage />)
+
+    expect(screen.getByText(/start typing to begin/i)).toBeInTheDocument()
+    expect(screen.queryByText('wpm')).not.toBeInTheDocument()
   })
 })
