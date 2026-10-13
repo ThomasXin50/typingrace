@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useRandomText } from './useRandomText'
+import { useSubmitRun } from './useSubmitRun'
 import { useTypingEngine } from './useTypingEngine'
 import './typing.css'
 
@@ -7,6 +8,7 @@ export function SoloTypingTest() {
   const { text, loading, error, requestNext } = useRandomText()
   const content = text?.content ?? ''
   const engine = useTypingEngine(content)
+  const submitRun = useSubmitRun()
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -16,6 +18,15 @@ export function SoloTypingTest() {
     // engine re-render (engine is a fresh object each render).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content])
+
+  useEffect(() => {
+    if (engine.status === 'finished' && text) {
+      submitRun.submit(text.id, engine.keystrokes)
+    }
+    // engine.status flips to 'finished' exactly once per run (handleKeyDown
+    // locks out further events after), so only that transition matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.status])
 
   if (loading) {
     return <p className="typing-status">Loading a text to type…</p>
@@ -27,6 +38,16 @@ export function SoloTypingTest() {
         {error}
       </p>
     )
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== 'Backspace' && e.key.length !== 1) return
+    e.preventDefault()
+    engine.handleKeyDown({
+      key: e.key,
+      timestamp: e.nativeEvent.timeStamp,
+      trusted: e.nativeEvent.isTrusted,
+    })
   }
 
   return (
@@ -45,8 +66,7 @@ export function SoloTypingTest() {
       <input
         ref={inputRef}
         className="typing-input"
-        value={engine.typed}
-        onChange={(e) => engine.handleChange(e.target.value)}
+        onKeyDown={handleKeyDown}
         disabled={engine.status === 'finished'}
         autoFocus
         autoComplete="off"
@@ -86,6 +106,18 @@ export function SoloTypingTest() {
             Next text
           </button>
         </div>
+      )}
+
+      {engine.status === 'finished' && (
+        <p className="typing-save-status">
+          {submitRun.submitting && 'Saving…'}
+          {submitRun.error && `Not saved: ${submitRun.error}`}
+          {submitRun.result?.status === 'verified' && 'Saved to your history.'}
+          {submitRun.result?.status === 'flagged' &&
+            "Saved, but flagged for review — won't count on the leaderboard yet."}
+          {submitRun.result?.status === 'rejected' &&
+            'Not counted — this run looked automated.'}
+        </p>
       )}
     </div>
   )

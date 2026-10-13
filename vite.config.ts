@@ -8,6 +8,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
+    // Edge Functions run on Deno and are tested with `deno test`, not
+    // Vitest - their jsr:/npm: specifiers aren't resolvable here.
+    exclude: ['**/node_modules/**', 'supabase/functions/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
