@@ -45,8 +45,13 @@
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
+  /* Set to the path's real length (WpmChart measures it via
+     getTotalLength()) so the draw-in animation always covers the whole
+     line, however long or jagged a run makes it. The 2000 fallback only
+     applies where SVG geometry measurement isn't available (e.g. jsdom in
+     tests) and is otherwise unused. */
+  stroke-dasharray: var(--wpm-chart-path-length, 2000);
+  stroke-dashoffset: var(--wpm-chart-path-length, 2000);
   animation: wpm-chart-draw 0.8s ease-out forwards;
 }
 

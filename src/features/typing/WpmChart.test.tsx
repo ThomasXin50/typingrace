@@ -41,4 +41,41 @@ describe('WpmChart', () => {
     expect(() => fireEvent.pointerMove(svg, { clientX: 403 })).not.toThrow()
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
+
+  it('sizes the draw-in animation to the real path length instead of a fixed budget, so a long zigzagging run still draws fully', () => {
+    const points = [
+      { timeSec: 1, wpm: 80 },
+      { timeSec: 2, wpm: 95 },
+    ]
+
+    const { rerender } = render(<WpmChart points={points} />)
+    const path = document.querySelector<SVGPathElement>('.wpm-chart__line')
+
+    // jsdom doesn't implement SVGGeometryElement.getTotalLength, so patch
+    // it onto the rendered node directly (as a real browser's would be),
+    // simulating a path far longer than any fixed stroke-dasharray budget
+    // (e.g. a long run with lots of wpm swings), then trigger the effect
+    // that re-measures it by changing the path's geometry.
+    expect(path).not.toBeNull()
+    Object.defineProperty(path, 'getTotalLength', {
+      value: () => 4321,
+      configurable: true,
+    })
+
+    rerender(<WpmChart points={[...points, { timeSec: 3, wpm: 60 }]} />)
+
+    expect(path?.style.getPropertyValue('--wpm-chart-path-length')).toBe('4321')
+  })
+
+  it('falls back to the CSS default budget without crashing when path-length measurement is unavailable (e.g. jsdom)', () => {
+    const points = [
+      { timeSec: 1, wpm: 80 },
+      { timeSec: 2, wpm: 95 },
+    ]
+
+    render(<WpmChart points={points} />)
+
+    const path = document.querySelector<SVGPathElement>('.wpm-chart__line')
+    expect(path?.style.getPropertyValue('--wpm-chart-path-length')).toBe('')
+  })
 })
