@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 export interface Profile {
   id: string
   username: string
+  isAnonymous: boolean
 }
 
 interface UseProfileResult {
@@ -23,6 +24,7 @@ export function useProfile(): UseProfileResult {
     async function bootstrap() {
       const { data: sessionData } = await supabase.auth.getSession()
       let userId = sessionData.session?.user.id
+      let isAnonymous = sessionData.session?.user.is_anonymous ?? false
 
       if (!userId) {
         const { data: signInData, error: signInError } =
@@ -37,6 +39,7 @@ export function useProfile(): UseProfileResult {
         }
 
         userId = signInData.user?.id
+        isAnonymous = signInData.user?.is_anonymous ?? true
       }
 
       const { data: profileData, error: profileError } = await supabase
@@ -50,7 +53,10 @@ export function useProfile(): UseProfileResult {
       if (profileError) {
         setError(profileError.message)
       } else {
-        setProfile(profileData as Profile)
+        setProfile({
+          ...(profileData as Omit<Profile, 'isAnonymous'>),
+          isAnonymous,
+        })
       }
       setLoading(false)
     }

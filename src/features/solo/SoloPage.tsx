@@ -44,8 +44,8 @@ export function SoloPage() {
           </p>
         }
       />
-      <button type="button" className="typing-next" onClick={requestNext}>
-        Next text <span className="typing-next__shortcut">(tab + enter)</span>
+      <button type="button" className="btn" onClick={requestNext}>
+        Next text <span className="btn__shortcut">(tab + enter)</span>
       </button>
     </div>
   )

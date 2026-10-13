@@ -137,42 +137,6 @@
   }
 }
 
-.typing-next {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  padding: 0.5rem 1rem;
-  font-size: 0.9375rem;
-  cursor: pointer;
-}
-
-.typing-next:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.typing-next:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.typing-next:disabled {
-  color: var(--text-muted);
-  cursor: not-allowed;
-}
-
-.typing-next:disabled:hover {
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-
-.typing-next__shortcut {
-  color: var(--text-muted);
-  font-weight: 400;
-  font-size: 0.8125rem;
-}
-
 .typing-save-status {
   font-size: 0.8125rem;
   color: var(--text-muted);

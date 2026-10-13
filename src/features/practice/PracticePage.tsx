@@ -43,7 +43,7 @@ export function PracticePage() {
         />
         <button
           type="button"
-          className="typing-next"
+          className="btn"
           disabled={customText.trim().length === 0}
           onClick={() => {
             setOverride(customText.trim())
@@ -73,9 +73,8 @@ export function PracticePage() {
         Practice custom text instead
       </button>
       <TypingRun key={content} content={content} onSkip={handleNext} />
-      <button type="button" className="typing-next" onClick={handleNext}>
-        Next random text{' '}
-        <span className="typing-next__shortcut">(tab + enter)</span>
+      <button type="button" className="btn" onClick={handleNext}>
+        Next random text <span className="btn__shortcut">(tab + enter)</span>
       </button>
     </div>
   )

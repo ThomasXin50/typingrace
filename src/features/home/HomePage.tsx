@@ -33,7 +33,7 @@ export function HomePage() {
   return (
     <>
       {stats && (
-        <div className="home-stats">
+        <div className="stat-row">
           <div className="stat-tile stat-tile--primary">
             <span className="stat-tile__value">
               {Math.round(stats.bestWpm)}
@@ -52,7 +52,7 @@ export function HomePage() {
       )}
 
       {!stats && !loading && !error && (
-        <p className="home-stats-empty">
+        <p className="stat-row-empty">
           No runs yet — head to Solo or Practice to see your stats here.
         </p>
       )}

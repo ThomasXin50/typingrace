@@ -6,6 +6,7 @@ import { HomePage } from './features/home/HomePage'
 import { LeaderboardPage } from './features/leaderboard/LeaderboardPage'
 import { MultiplayerPage } from './features/multiplayer/MultiplayerPage'
 import { PracticePage } from './features/practice/PracticePage'
+import { ProfilePage } from './features/profile/ProfilePage'
 import { SoloPage } from './features/solo/SoloPage'
 
 function App() {
@@ -14,7 +15,10 @@ function App() {
   return (
     <BrowserRouter>
       <main className="app">
-        <NavBar username={profile?.username} />
+        <NavBar
+          username={profile?.username}
+          isAnonymous={profile?.isAnonymous}
+        />
         {loading && <p className="page-status">Loading...</p>}
         {error && (
           <p className="page-status" role="alert">
@@ -28,6 +32,7 @@ function App() {
             <Route path="/practice" element={<PracticePage />} />
             <Route path="/leaderboards" element={<LeaderboardPage />} />
             <Route path="/multiplayer" element={<MultiplayerPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         )}
       </main>

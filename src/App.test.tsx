@@ -26,6 +26,10 @@ vi.mock('./features/leaderboard/LeaderboardPage', () => ({
   LeaderboardPage: () => <div>leaderboard page</div>,
 }))
 
+vi.mock('./features/profile/ProfilePage', () => ({
+  ProfilePage: () => <div>profile page</div>,
+}))
+
 describe('App', () => {
   afterEach(() => {
     window.history.pushState({}, '', '/')
