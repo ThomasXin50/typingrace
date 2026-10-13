@@ -1,17 +1,12 @@
 import { act, renderHook } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { useTypingEngine } from './useTypingEngine'
 
+function press(key: string, timestamp: number, trusted = true) {
+  return { key, timestamp, trusted }
+}
+
 describe('useTypingEngine', () => {
-  beforeEach(() => {
-    vi.useFakeTimers()
-    vi.setSystemTime(0)
-  })
-
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
   it('starts idle with every character pending except the first', () => {
     const { result } = renderHook(() => useTypingEngine('abc'))
 
@@ -22,12 +17,13 @@ describe('useTypingEngine', () => {
       'pending',
     ])
     expect(result.current.stats).toBeNull()
+    expect(result.current.keystrokes).toEqual([])
   })
 
   it('marks correct and incorrect characters while typing, continuing through errors', () => {
     const { result } = renderHook(() => useTypingEngine('abc'))
 
-    act(() => result.current.handleChange('a'))
+    act(() => result.current.handleKeyDown(press('a', 0)))
     expect(result.current.status).toBe('running')
     expect(result.current.charStatuses).toEqual([
       'correct',
@@ -35,7 +31,7 @@ describe('useTypingEngine', () => {
       'pending',
     ])
 
-    act(() => result.current.handleChange('ax'))
+    act(() => result.current.handleKeyDown(press('x', 100)))
     expect(result.current.charStatuses).toEqual([
       'correct',
       'incorrect',
@@ -46,14 +42,28 @@ describe('useTypingEngine', () => {
   it('removes the last character on backspace without counting it as a new keystroke', () => {
     const { result } = renderHook(() => useTypingEngine('abc'))
 
-    act(() => result.current.handleChange('ax'))
-    act(() => result.current.handleChange('a'))
+    act(() => result.current.handleKeyDown(press('x', 0)))
+    act(() => result.current.handleKeyDown(press('Backspace', 100)))
 
-    expect(result.current.typed).toBe('a')
+    expect(result.current.typed).toBe('')
     expect(result.current.charStatuses).toEqual([
-      'correct',
       'current',
       'pending',
+      'pending',
+    ])
+  })
+
+  it('records every keydown in order, including backspace and untrusted events', () => {
+    const { result } = renderHook(() => useTypingEngine('ab'))
+
+    act(() => result.current.handleKeyDown(press('x', 0, false)))
+    act(() => result.current.handleKeyDown(press('Backspace', 100)))
+    act(() => result.current.handleKeyDown(press('a', 200)))
+
+    expect(result.current.keystrokes).toEqual([
+      press('x', 0, false),
+      press('Backspace', 100),
+      press('a', 200),
     ])
   })
 
@@ -61,9 +71,11 @@ describe('useTypingEngine', () => {
     const text = 'a'.repeat(25) // 25 chars = 5 "words" at 5 chars/word
     const { result } = renderHook(() => useTypingEngine(text))
 
-    act(() => result.current.handleChange('a')) // starts the clock at t=0
-    vi.setSystemTime(60_000) // exactly one minute later
-    act(() => result.current.handleChange(text))
+    // First-to-last keystroke spans exactly 60s (24 intervals) => 5 wpm.
+    const interval = 60_000 / 24
+    for (let i = 0; i < text.length; i++) {
+      act(() => result.current.handleKeyDown(press('a', i * interval)))
+    }
 
     expect(result.current.status).toBe('finished')
     expect(result.current.stats).toEqual({
@@ -78,10 +90,10 @@ describe('useTypingEngine', () => {
   it('counts a corrected mistake toward error count and accuracy', () => {
     const { result } = renderHook(() => useTypingEngine('ab'))
 
-    act(() => result.current.handleChange('x')) // mistake: 1 keystroke, 1 error
-    act(() => result.current.handleChange('')) // backspace, not a keystroke
-    act(() => result.current.handleChange('a')) // correct: 2nd keystroke
-    act(() => result.current.handleChange('ab')) // correct: 3rd keystroke, finishes
+    act(() => result.current.handleKeyDown(press('x', 0))) // mistake
+    act(() => result.current.handleKeyDown(press('Backspace', 100)))
+    act(() => result.current.handleKeyDown(press('a', 200)))
+    act(() => result.current.handleKeyDown(press('b', 300))) // finishes
 
     expect(result.current.status).toBe('finished')
     expect(result.current.stats?.errorCount).toBe(1)
@@ -91,23 +103,28 @@ describe('useTypingEngine', () => {
   it('ignores further input once finished', () => {
     const { result } = renderHook(() => useTypingEngine('ab'))
 
-    act(() => result.current.handleChange('ab'))
+    act(() => result.current.handleKeyDown(press('a', 0)))
+    act(() => result.current.handleKeyDown(press('b', 100)))
     const statsAfterFinish = result.current.stats
+    const keystrokesAfterFinish = result.current.keystrokes
 
-    act(() => result.current.handleChange('abc'))
+    act(() => result.current.handleKeyDown(press('c', 200)))
 
     expect(result.current.typed).toBe('ab')
     expect(result.current.stats).toEqual(statsAfterFinish)
+    expect(result.current.keystrokes).toEqual(keystrokesAfterFinish)
   })
 
-  it('reset returns to the idle state', () => {
+  it('reset returns to the idle state and clears the keystroke log', () => {
     const { result } = renderHook(() => useTypingEngine('ab'))
 
-    act(() => result.current.handleChange('ab'))
+    act(() => result.current.handleKeyDown(press('a', 0)))
+    act(() => result.current.handleKeyDown(press('b', 100)))
     act(() => result.current.reset())
 
     expect(result.current.status).toBe('idle')
     expect(result.current.typed).toBe('')
     expect(result.current.stats).toBeNull()
+    expect(result.current.keystrokes).toEqual([])
   })
 })
