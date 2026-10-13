@@ -131,29 +131,29 @@ export function TypingRun({
       {engine.status === 'finished' && engine.stats && (
         <>
           <div className="typing-results typing-results--enter">
-            <div className="typing-stat typing-stat--primary">
-              <span className="typing-stat__value">
+            <div className="stat-tile stat-tile--primary">
+              <span className="stat-tile__value">
                 {Math.round(engine.stats.wpm)}
               </span>
-              <span className="typing-stat__label">wpm</span>
+              <span className="stat-tile__label">wpm</span>
             </div>
-            <div className="typing-stat">
-              <span className="typing-stat__value">
+            <div className="stat-tile">
+              <span className="stat-tile__value">
                 {Math.round(engine.stats.accuracy)}%
               </span>
-              <span className="typing-stat__label">accuracy</span>
+              <span className="stat-tile__label">accuracy</span>
             </div>
-            <div className="typing-stat">
-              <span className="typing-stat__value">
+            <div className="stat-tile">
+              <span className="stat-tile__value">
                 {Math.round(engine.stats.rawWpm)}
               </span>
-              <span className="typing-stat__label">raw wpm</span>
+              <span className="stat-tile__label">raw wpm</span>
             </div>
-            <div className="typing-stat">
-              <span className="typing-stat__value">
+            <div className="stat-tile">
+              <span className="stat-tile__value">
                 {engine.stats.errorCount}
               </span>
-              <span className="typing-stat__label">errors</span>
+              <span className="stat-tile__label">errors</span>
             </div>
           </div>
           <WpmChart points={wpmSeries} />
