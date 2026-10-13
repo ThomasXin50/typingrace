@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { TypingRun } from '../typing/TypingRun'
 import { useRandomText } from '../typing/useRandomText'
 import './practice.css'
@@ -14,6 +14,9 @@ export function PracticePage() {
   // text/content value itself doesn't change in that case, so React would
   // otherwise leave the finished run on screen instead of resetting it.
   const [runKey, setRunKey] = useState(0)
+  // Owned here (not inside TypingRun) so holding Tab survives that remount -
+  // see TypingRun's tabHeldRef prop.
+  const tabHeldRef = useRef(false)
 
   if (loading) {
     return <p className="page-status">Loading a text to type…</p>
@@ -80,7 +83,12 @@ export function PracticePage() {
       >
         Practice custom text instead
       </button>
-      <TypingRun key={runKey} content={content} onSkip={handleNext} />
+      <TypingRun
+        key={runKey}
+        content={content}
+        onSkip={handleNext}
+        tabHeldRef={tabHeldRef}
+      />
       <button type="button" className="btn" onClick={handleNext}>
         Next random text <span className="btn__shortcut">(tab + enter)</span>
       </button>
