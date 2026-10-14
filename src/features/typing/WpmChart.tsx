@@ -21,13 +21,21 @@ interface WpmChartProps {
 
 export function WpmChart({ points }: WpmChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+  const [showRaw, setShowRaw] = useState(false)
   const svgRef = useRef<SVGSVGElement>(null)
   const pathRef = useRef<SVGPathElement>(null)
   const [pathLength, setPathLength] = useState<number | null>(null)
   const titleId = useId()
   const descId = useId()
 
-  const series = points.length > 0 ? withOrigin(points) : []
+  // Net (error-adjusted) wpm is the default, matching the headline stat -
+  // raw (every keystroke, including uncorrected typos) is opt-in.
+  const displayed = points.map((p) => ({
+    timeSec: p.timeSec,
+    wpm: showRaw ? p.rawWpm : p.wpm,
+  }))
+
+  const series = displayed.length > 0 ? withOrigin(displayed) : []
   const maxTime = series.length > 0 ? series[series.length - 1].timeSec : 0
   const maxWpm = niceMax(Math.max(0, ...series.map((p) => p.wpm)))
 
@@ -52,7 +60,7 @@ export function WpmChart({ points }: WpmChartProps) {
 
   if (points.length === 0) return null
 
-  const last = points[points.length - 1]
+  const last = displayed[displayed.length - 1]
 
   function handlePointerMove(e: React.PointerEvent<SVGSVGElement>) {
     const rect = svgRef.current?.getBoundingClientRect()
@@ -66,9 +74,18 @@ export function WpmChart({ points }: WpmChartProps) {
 
   return (
     <div className="wpm-chart">
-      <h3 className="wpm-chart__title" id={titleId}>
-        wpm over time
-      </h3>
+      <div className="wpm-chart__header">
+        <h3 className="wpm-chart__title" id={titleId}>
+          wpm over time
+        </h3>
+        <button
+          type="button"
+          className="wpm-chart__toggle"
+          onClick={() => setShowRaw((v) => !v)}
+        >
+          {showRaw ? 'Net wpm' : 'Raw wpm'}
+        </button>
+      </div>
 
       <svg
         ref={svgRef}
@@ -144,7 +161,7 @@ export function WpmChart({ points }: WpmChartProps) {
       </svg>
 
       <span className="wpm-chart__sr-only" id={descId}>
-        {points
+        {displayed
           .map((p) => `${Math.round(p.wpm)} wpm at ${p.timeSec}s`)
           .join(', ')}
       </span>

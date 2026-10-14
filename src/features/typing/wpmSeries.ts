@@ -2,7 +2,12 @@ import type { Keystroke } from './useTypingEngine'
 
 export interface WpmPoint {
   timeSec: number
+  /** Error-adjusted (net) wpm - only correctly-placed characters count,
+   * matching useTypingEngine's headline wpm stat. The default view. */
   wpm: number
+  /** Every keystroke that advanced the cursor counts, correct or not -
+   * matching useTypingEngine's headline rawWpm stat. */
+  rawWpm: number
 }
 
 const BUCKET_MS = 1000
@@ -12,23 +17,37 @@ const WORD_LENGTH = 5
 interface TracePoint {
   timestamp: number
   typedLength: number
+  correctLength: number
 }
 
-function lengthAtOrBefore(trace: TracePoint[], t: number): number {
-  let length = 0
+function valueAtOrBefore(
+  trace: TracePoint[],
+  t: number,
+  field: 'typedLength' | 'correctLength',
+): number {
+  let value = 0
   for (const point of trace) {
     if (point.timestamp > t) break
-    length = point.typedLength
+    value = point[field]
   }
-  return length
+  return value
+}
+
+function countCorrect(text: string, typed: string): number {
+  let correct = 0
+  for (let i = 0; i < typed.length; i++) {
+    if (typed[i] === text[i]) correct++
+  }
+  return correct
 }
 
 /**
  * Instantaneous wpm over the course of a finished run, bucketed into 1s
  * windows. Mirrors useTypingEngine's replay semantics (continue-through-
  * errors, locked after finish) so this is consistent with the headline
- * wpm stat, not a separate calculation that can quietly disagree with it.
- * Returns [] for runs too short to tell a meaningful "over time" story.
+ * wpm/rawWpm stats, not a separate calculation that can quietly disagree
+ * with them. Returns [] for runs too short to tell a meaningful "over
+ * time" story.
  */
 export function computeWpmSeries(
   text: string,
@@ -52,7 +71,11 @@ export function computeWpmSeries(
       continue
     }
 
-    trace.push({ timestamp: ks.timestamp, typedLength: typed.length })
+    trace.push({
+      timestamp: ks.timestamp,
+      typedLength: typed.length,
+      correctLength: countCorrect(text, typed),
+    })
 
     if (typed.length === text.length) {
       finishTimestamp = ks.timestamp
@@ -78,9 +101,16 @@ export function computeWpmSeries(
     const actualBucketMs = bucketEnd - bucketStart
     if (actualBucketMs <= 0) continue
 
-    const lengthStart = lengthAtOrBefore(trace, bucketStart)
-    const lengthEnd = lengthAtOrBefore(trace, bucketEnd)
-    const delta = Math.max(0, lengthEnd - lengthStart)
+    const rawDelta = Math.max(
+      0,
+      valueAtOrBefore(trace, bucketEnd, 'typedLength') -
+        valueAtOrBefore(trace, bucketStart, 'typedLength'),
+    )
+    const correctDelta = Math.max(
+      0,
+      valueAtOrBefore(trace, bucketEnd, 'correctLength') -
+        valueAtOrBefore(trace, bucketStart, 'correctLength'),
+    )
     const minutes = actualBucketMs / 60_000
 
     points.push({
@@ -89,7 +119,8 @@ export function computeWpmSeries(
       // would otherwise round down to the same second as the prior bucket,
       // producing two points at an identical timeSec.
       timeSec: b + 1,
-      wpm: minutes > 0 ? delta / WORD_LENGTH / minutes : 0,
+      wpm: minutes > 0 ? correctDelta / WORD_LENGTH / minutes : 0,
+      rawWpm: minutes > 0 ? rawDelta / WORD_LENGTH / minutes : 0,
     })
   }
 
