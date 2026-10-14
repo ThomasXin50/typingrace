@@ -1,8 +1,9 @@
+import { useEffect, useState } from 'react'
 import { displayName } from '../../lib/displayName'
 import { useProfile } from '../auth/useProfile'
 import { TypingRun } from '../typing/TypingRun'
 import type { Keystroke } from '../typing/useTypingEngine'
-import { useActiveRound } from './useActiveRound'
+import { useActiveRound, type RoundRow } from './useActiveRound'
 import { useCountdown } from './useCountdown'
 import { useRaceProgress } from './useRaceProgress'
 import { useRoundResults } from './useRoundResults'
@@ -12,6 +13,10 @@ import './multiplayer.css'
 
 interface RacePageProps {
   roomId: string
+  /** Called once this player's post-finish grace period has elapsed - the
+   * parent (RoomPage) owns actually leaving the race view; this never
+   * navigates on its own. */
+  onDone?: () => void
 }
 
 // A placeholder for useCountdown while the round hasn't loaded yet - any
@@ -23,7 +28,9 @@ interface RacePageProps {
 // to read as "not started" immediately, on the very first render.
 const PENDING_ROUND_PLACEHOLDER = '2099-01-01T00:00:00.000Z'
 
-export function RacePage({ roomId }: RacePageProps) {
+const BACK_TO_LOBBY_SECONDS = 8
+
+export function RacePage({ roomId, onDone }: RacePageProps) {
   const {
     round,
     loading: roundLoading,
@@ -34,14 +41,44 @@ export function RacePage({ roomId }: RacePageProps) {
     loading: textLoading,
     error: textError,
   } = useText(round?.text_id ?? null)
-  const countdown = useCountdown(round?.started_at ?? PENDING_ROUND_PLACEHOLDER)
-  const { results } = useRoundResults(round?.id ?? null)
+
+  // Frozen on the last known non-null value: useActiveRound's own query
+  // only ever matches the room's currently 'active' round, which stops
+  // matching the instant the round closes out (everyone's finished).
+  // Without this, finishing would show results for a moment, then
+  // immediately revert to "Waiting for the race to start..." as soon as
+  // that happens - exactly the window this page needs to stay stable
+  // through so a player can see their own results.
+  const [frozenRound, setFrozenRound] = useState<RoundRow | null>(null)
+  const [frozenContent, setFrozenContent] = useState<string | null>(null)
+  if (round && round !== frozenRound) setFrozenRound(round)
+  if (content && content !== frozenContent) setFrozenContent(content)
+  const effectiveRound = frozenRound ?? round
+  const effectiveContent = frozenContent ?? content
+
+  const countdown = useCountdown(
+    effectiveRound?.started_at ?? PENDING_ROUND_PLACEHOLDER,
+  )
+  const { results } = useRoundResults(effectiveRound?.id ?? null)
   const submitRoundRun = useSubmitRoundRun()
   const { profile } = useProfile()
   const { progress, sendProgress } = useRaceProgress(
-    round?.id ?? null,
+    effectiveRound?.id ?? null,
     profile?.id ?? null,
   )
+
+  const [hasFinished, setHasFinished] = useState(false)
+  const [lobbyCountdown, setLobbyCountdown] = useState(BACK_TO_LOBBY_SECONDS)
+
+  useEffect(() => {
+    if (!hasFinished) return
+    if (lobbyCountdown <= 0) {
+      onDone?.()
+      return
+    }
+    const timer = setTimeout(() => setLobbyCountdown((s) => s - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [hasFinished, lobbyCountdown, onDone])
 
   if (roundLoading || (round && textLoading)) {
     return <p className="page-status">Loading race…</p>
@@ -56,7 +93,7 @@ export function RacePage({ roomId }: RacePageProps) {
     )
   }
 
-  if (!round || !content) {
+  if (!effectiveRound || !effectiveContent) {
     return <p className="page-status">Waiting for the race to start…</p>
   }
 
@@ -72,15 +109,16 @@ export function RacePage({ roomId }: RacePageProps) {
   }
 
   function handleFinish(keystrokes: Keystroke[]) {
-    submitRoundRun.submit(round!.id, keystrokes)
+    submitRoundRun.submit(effectiveRound!.id, keystrokes)
+    setHasFinished(true)
   }
 
   return (
     <div className="race-page">
       <TypingRun
-        content={content}
+        content={effectiveContent}
         now={() => Date.now()}
-        startTimestamp={Date.parse(round.started_at)}
+        startTimestamp={Date.parse(effectiveRound.started_at)}
         onFinish={handleFinish}
         onProgress={sendProgress}
       />
@@ -90,12 +128,17 @@ export function RacePage({ roomId }: RacePageProps) {
           {results.map((r) => {
             const pct = r.status === 'finished' ? 1 : (progress[r.user_id] ?? 0)
             const isSelf = r.user_id === profile?.id
+            const hasResult = r.placement !== null && r.wpm !== null
             return (
               <li key={r.user_id} className="race-track">
                 <span className="race-track__name">
                   {isSelf ? 'You' : displayName(r, results)}
                 </span>
                 <div className="race-track__line">
+                  <span
+                    className="race-track__fill"
+                    style={{ width: `${pct * 100}%` }}
+                  />
                   <span
                     className={
                       r.status === 'finished'
@@ -107,15 +150,21 @@ export function RacePage({ roomId }: RacePageProps) {
                     style={{ left: `${pct * 100}%` }}
                   />
                 </div>
-                {r.placement !== null && r.wpm !== null && (
-                  <span className="race-track__result">
-                    #{r.placement} · {Math.round(r.wpm)} wpm
-                  </span>
-                )}
+                <span className="race-track__result">
+                  {hasResult
+                    ? `#${r.placement} · ${Math.round(r.wpm!)} wpm`
+                    : ''}
+                </span>
               </li>
             )
           })}
         </ul>
+      )}
+
+      {hasFinished && (
+        <p className="race-page__lobby-countdown">
+          Back to lobby in {lobbyCountdown}…
+        </p>
       )}
     </div>
   )

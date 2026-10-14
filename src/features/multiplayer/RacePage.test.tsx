@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RacePage } from './RacePage'
 
 const mocks = vi.hoisted(() => ({
@@ -28,6 +28,10 @@ vi.mock('./useRaceProgress', () => ({
 vi.mock('../auth/useProfile', () => ({ useProfile: mocks.useProfile }))
 
 describe('RacePage', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.useRoundResults.mockReturnValue({
@@ -348,6 +352,90 @@ describe('RacePage', () => {
 
     const [calledWith] = mocks.useCountdown.mock.calls[0]
     expect(Date.parse(calledWith)).toBeGreaterThan(Date.now() + 60_000)
+  })
+
+  it('keeps showing the finished run and results instead of reverting to "waiting for the race to start" once the round disappears from useActiveRound (its own query only ever returns the still-active round, which stops matching the moment everyone finishes)', async () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: new Date(Date.now() - 5000).toISOString(),
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'ab',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+
+    const { rerender } = render(<RacePage roomId="room-1" />)
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText('Typing input'), 'ab')
+
+    expect(screen.getByText('wpm')).toBeInTheDocument()
+
+    mocks.useActiveRound.mockReturnValue({
+      round: null,
+      loading: false,
+      error: null,
+    })
+    rerender(<RacePage roomId="room-1" />)
+
+    expect(screen.getByText('wpm')).toBeInTheDocument()
+    expect(
+      screen.queryByText(/waiting for the race to start/i),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows a "back to lobby" grace-period countdown once the player finishes, and calls onDone once it elapses - so the last player to finish still gets a moment to see their own results instead of being yanked back to the lobby the instant the room flips', () => {
+    // Fake timers from the start, before anything schedules a real
+    // setTimeout - switching to fake timers partway through would orphan
+    // whatever real timer the finish effect already scheduled, leaving
+    // nothing for advanceTimersByTime to actually advance. fireEvent
+    // (rather than userEvent, which relies on its own real internal
+    // delays) keeps typing itself synchronous under fake timers.
+    vi.useFakeTimers()
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: new Date(Date.now() - 5000).toISOString(),
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'ab',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+    const onDone = vi.fn()
+
+    render(<RacePage roomId="room-1" onDone={onDone} />)
+    const input = screen.getByLabelText('Typing input')
+
+    fireEvent.keyDown(input, { key: 'a' })
+    fireEvent.keyDown(input, { key: 'b' })
+
+    expect(screen.getByText(/back to lobby in/i)).toBeInTheDocument()
+    expect(onDone).not.toHaveBeenCalled()
+
+    // One second at a time, not a single big jump: the countdown chains
+    // through setTimeout -> state update -> effect re-run -> next
+    // setTimeout, and advancing past multiple links in one sweep races
+    // ahead of React's re-render, which is what actually schedules each
+    // next timer in the chain.
+    for (let i = 0; i < 10; i++) {
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+    }
+
+    expect(onDone).toHaveBeenCalledOnce()
   })
 
   it('shows an error when the round fails to load', () => {

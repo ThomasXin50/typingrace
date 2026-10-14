@@ -12,7 +12,12 @@ const mocks = vi.hoisted(() => ({
   useProfile: vi.fn(),
   useStartRace: vi.fn(),
   startRace: vi.fn(),
-  RacePage: vi.fn(() => <div>race page</div>),
+  RacePage: vi.fn(({ onDone }: { onDone: () => void }) => (
+    <div>
+      race page
+      <button onClick={onDone}>finish race page</button>
+    </div>
+  )),
 }))
 
 vi.mock('./useRoom', () => ({ useRoom: mocks.useRoom }))
@@ -280,5 +285,103 @@ describe('RoomPage', () => {
 
     expect(screen.getByText('race page')).toBeInTheDocument()
     expect(screen.queryByText('ABC123')).not.toBeInTheDocument()
+  })
+
+  it('keeps showing the race page even after room.status flips back to lobby, until the race page itself signals it is done (so a just-finished player keeps seeing their results instead of being yanked back to the lobby the instant everyone else finishes too)', () => {
+    const racingRoom = {
+      id: 'room-1',
+      host_id: 'alice',
+      status: 'racing' as const,
+      max_players: 8,
+      difficulty_filter: 'all' as const,
+      join_code: 'ABC123',
+    }
+    const members = [
+      {
+        user_id: 'alice',
+        status: 'active' as const,
+        joined_at: 't1',
+        username: 'alice',
+        is_anonymous: false,
+      },
+    ]
+
+    mocks.useRoom.mockReturnValue({
+      room: racingRoom,
+      members,
+      loading: false,
+      error: null,
+    })
+    const { rerender } = renderAt('room-1')
+
+    expect(screen.getByText('race page')).toBeInTheDocument()
+
+    // The room finishes and returns to 'lobby' (everyone has submitted) -
+    // the race page must not disappear on its own from this alone.
+    mocks.useRoom.mockReturnValue({
+      room: { ...racingRoom, status: 'lobby' },
+      members,
+      loading: false,
+      error: null,
+    })
+    rerender(
+      <MemoryRouter initialEntries={['/multiplayer/room-1']}>
+        <Routes>
+          <Route path="/multiplayer/:roomId" element={<RoomPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('race page')).toBeInTheDocument()
+    expect(screen.queryByText('ABC123')).not.toBeInTheDocument()
+  })
+
+  it('returns to the lobby once the race page calls onDone (by which point room.status has already flipped back to lobby in practice)', async () => {
+    const baseRoom = {
+      id: 'room-1',
+      host_id: 'alice',
+      max_players: 8,
+      difficulty_filter: 'all' as const,
+      join_code: 'ABC123',
+    }
+    const members = [
+      {
+        user_id: 'alice',
+        status: 'active' as const,
+        joined_at: 't1',
+        username: 'alice',
+        is_anonymous: false,
+      },
+    ]
+
+    mocks.useRoom.mockReturnValue({
+      room: { ...baseRoom, status: 'racing' as const },
+      members,
+      loading: false,
+      error: null,
+    })
+    const { rerender } = renderAt('room-1')
+    expect(screen.getByText('race page')).toBeInTheDocument()
+
+    mocks.useRoom.mockReturnValue({
+      room: { ...baseRoom, status: 'lobby' as const },
+      members,
+      loading: false,
+      error: null,
+    })
+    rerender(
+      <MemoryRouter initialEntries={['/multiplayer/room-1']}>
+        <Routes>
+          <Route path="/multiplayer/:roomId" element={<RoomPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+    expect(screen.getByText('race page')).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /finish race page/i }))
+
+    expect(screen.getByText('ABC123')).toBeInTheDocument()
+    expect(screen.queryByText('race page')).not.toBeInTheDocument()
   })
 })

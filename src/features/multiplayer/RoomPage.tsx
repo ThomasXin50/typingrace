@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { displayName } from '../../lib/displayName'
 import { useProfile } from '../auth/useProfile'
@@ -14,6 +15,7 @@ export function RoomPage() {
   const { room, members, loading, error } = useRoom(roomId!)
   const leaveRoomState = useLeaveRoom()
   const startRaceState = useStartRace()
+  const [inRace, setInRace] = useState(false)
 
   if (loading) {
     return <p className="page-status">Loading room…</p>
@@ -27,8 +29,18 @@ export function RoomPage() {
     )
   }
 
-  if (room.status === 'racing') {
-    return <RacePage roomId={room.id} />
+  // Adjust state during render: once entered, the race page owns its own
+  // exit (it shows a grace-period "back to lobby" countdown after this
+  // player finishes) rather than disappearing the instant room.status
+  // flips back to 'lobby' - which happens as soon as everyone else
+  // finishes too, well before any single player has had a moment to look
+  // at their own results.
+  if (room.status === 'racing' && !inRace) {
+    setInRace(true)
+  }
+
+  if (inRace) {
+    return <RacePage roomId={room.id} onDone={() => setInRace(false)} />
   }
 
   const listing = members.map((m) => ({

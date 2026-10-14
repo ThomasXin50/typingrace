@@ -170,6 +170,15 @@
   background: var(--border);
 }
 
+.race-track__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease-out;
+}
+
 .race-track__dot {
   position: absolute;
   top: 50%;
@@ -214,7 +223,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .race-track__dot {
+  .race-track__dot,
+  .race-track__fill {
     transition: none;
   }
 
@@ -229,4 +239,15 @@
   color: var(--text-muted);
   font-size: 0.8125rem;
   white-space: nowrap;
+  /* Reserved regardless of whether a result is shown yet, so a finished
+     participant's row never shrinks its own track relative to everyone
+     else's - same "reserve the space" idea as .typing-hint-slot. */
+  min-width: 8rem;
+  text-align: right;
+}
+
+.race-page__lobby-countdown {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
