@@ -8,6 +8,15 @@ interface RacePageProps {
   roomId: string
 }
 
+// A placeholder for useCountdown while the round hasn't loaded yet - any
+// fixed date far enough in the future works, since it's only ever replaced
+// by the real round.started_at once data arrives (never displayed or used
+// for real countdown math). Must be a static value, not e.g. Date.now() +
+// margin: React requires render to stay pure, and useCountdown's initial
+// state is seeded once from whatever it's first called with, so this needs
+// to read as "not started" immediately, on the very first render.
+const PENDING_ROUND_PLACEHOLDER = '2099-01-01T00:00:00.000Z'
+
 export function RacePage({ roomId }: RacePageProps) {
   const {
     round,
@@ -19,7 +28,7 @@ export function RacePage({ roomId }: RacePageProps) {
     loading: textLoading,
     error: textError,
   } = useText(round?.text_id ?? null)
-  const countdown = useCountdown(round?.started_at ?? new Date().toISOString())
+  const countdown = useCountdown(round?.started_at ?? PENDING_ROUND_PLACEHOLDER)
 
   if (roundLoading || (round && textLoading)) {
     return <p className="page-status">Loading race…</p>

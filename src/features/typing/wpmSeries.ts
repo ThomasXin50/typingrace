@@ -33,6 +33,7 @@ function lengthAtOrBefore(trace: TracePoint[], t: number): number {
 export function computeWpmSeries(
   text: string,
   keystrokes: Keystroke[],
+  startTimestamp?: number,
 ): WpmPoint[] {
   let typed = ''
   let firstTimestamp: number | null = null
@@ -60,18 +61,20 @@ export function computeWpmSeries(
 
   if (firstTimestamp === null || finishTimestamp === null) return []
 
-  const durationMs = finishTimestamp - firstTimestamp
+  // A race measures elapsed time from the synchronized start, not this
+  // player's own first keystroke - same reasoning as useTypingEngine's
+  // startTimestamp option, so the chart's time axis never disagrees with
+  // the headline wpm/duration stat it's illustrating.
+  const origin = startTimestamp ?? firstTimestamp
+  const durationMs = finishTimestamp - origin
   if (durationMs < MIN_DURATION_MS) return []
 
   const bucketCount = Math.ceil(durationMs / BUCKET_MS)
   const points: WpmPoint[] = []
 
   for (let b = 0; b < bucketCount; b++) {
-    const bucketStart = firstTimestamp + b * BUCKET_MS
-    const bucketEnd = Math.min(
-      firstTimestamp + (b + 1) * BUCKET_MS,
-      finishTimestamp,
-    )
+    const bucketStart = origin + b * BUCKET_MS
+    const bucketEnd = Math.min(origin + (b + 1) * BUCKET_MS, finishTimestamp)
     const actualBucketMs = bucketEnd - bucketStart
     if (actualBucketMs <= 0) continue
 

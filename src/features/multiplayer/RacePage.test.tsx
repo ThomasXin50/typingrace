@@ -76,6 +76,25 @@ describe('RacePage', () => {
     expect(screen.getByLabelText('Typing input')).toBeInTheDocument()
   })
 
+  it('never passes an "already started" fallback to useCountdown while the round is still loading, which would otherwise flash the typing interface before the countdown renders (useCountdown\'s initial state is seeded once, from whatever it is first called with)', () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: null,
+      loading: true,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: null,
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: false })
+
+    render(<RacePage roomId="room-1" />)
+
+    const [calledWith] = mocks.useCountdown.mock.calls[0]
+    expect(Date.parse(calledWith)).toBeGreaterThan(Date.now() + 60_000)
+  })
+
   it('shows an error when the round fails to load', () => {
     mocks.useActiveRound.mockReturnValue({
       round: null,

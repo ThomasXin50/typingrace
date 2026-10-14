@@ -96,6 +96,32 @@ describe('computeWpmSeries', () => {
     expect(timeSecs).toEqual([1, 2, 3, 4, 5, 6])
   })
 
+  it("anchors bucket timing to an explicit startTimestamp instead of the first keystroke, when given (races: the shared synchronized start, not this player's reaction time)", () => {
+    const text = 'a'.repeat(10)
+    const reactionDelayMs = 3500
+    const keystrokes: Keystroke[] = Array.from({ length: 10 }, (_, i) => ({
+      key: 'a',
+      timestamp: reactionDelayMs + i * 1000,
+      trusted: true,
+    }))
+
+    const series = computeWpmSeries(text, keystrokes, 0)
+
+    // The buckets before the player's first keystroke are real,
+    // zero-progress time - the clock was already running from
+    // startTimestamp, not from whenever they got around to typing.
+    expect(series[0].wpm).toBe(0)
+    expect(series[1].wpm).toBe(0)
+    expect(series[2].wpm).toBe(0)
+    expect(series.at(-1)?.timeSec).toBe(13)
+
+    // Without an explicit startTimestamp, bucketing still anchors to the
+    // first keystroke as before (solo/practice, unaffected).
+    const withoutStart = computeWpmSeries(text, keystrokes)
+    expect(withoutStart[0].wpm).toBeGreaterThan(0)
+    expect(withoutStart.at(-1)?.timeSec).toBe(9)
+  })
+
   it('never reports negative wpm even when a bucket nets backward', () => {
     const text = 'a'.repeat(25)
     const keystrokes: Keystroke[] = [

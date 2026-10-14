@@ -88,9 +88,9 @@ export function TypingRun({
   const wpmSeries = useMemo(
     () =>
       engine.status === 'finished'
-        ? computeWpmSeries(content, engine.keystrokes)
+        ? computeWpmSeries(content, engine.keystrokes, startTimestamp)
         : [],
-    [engine.status, content, engine.keystrokes],
+    [engine.status, content, engine.keystrokes, startTimestamp],
   )
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
