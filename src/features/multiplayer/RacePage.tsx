@@ -89,10 +89,11 @@ export function RacePage({ roomId }: RacePageProps) {
         <ul className="race-tracks">
           {results.map((r) => {
             const pct = r.status === 'finished' ? 1 : (progress[r.user_id] ?? 0)
+            const isSelf = r.user_id === profile?.id
             return (
               <li key={r.user_id} className="race-track">
                 <span className="race-track__name">
-                  {displayName(r, results)}
+                  {isSelf ? 'You' : displayName(r, results)}
                 </span>
                 <div className="race-track__line">
                   <span
@@ -106,29 +107,14 @@ export function RacePage({ roomId }: RacePageProps) {
                     style={{ left: `${pct * 100}%` }}
                   />
                 </div>
+                {r.placement !== null && r.wpm !== null && (
+                  <span className="race-track__result">
+                    #{r.placement} · {Math.round(r.wpm)} wpm
+                  </span>
+                )}
               </li>
             )
           })}
-        </ul>
-      )}
-
-      {results.length > 0 && (
-        <ul className="race-results">
-          {results.map((r) => (
-            <li key={r.user_id} className="race-results__item">
-              <span className="race-results__placement">
-                {r.placement ? `#${r.placement}` : 'Racing…'}
-              </span>
-              <span className="race-results__name">
-                {displayName(r, results)}
-              </span>
-              {r.wpm !== null && (
-                <span className="race-results__wpm">
-                  {Math.round(r.wpm)} wpm
-                </span>
-              )}
-            </li>
-          ))}
         </ul>
       )}
     </div>

@@ -26,11 +26,13 @@ describe('useRaceProgress', () => {
     vi.clearAllMocks()
   })
 
-  it('subscribes to a per-round broadcast channel', async () => {
+  it('subscribes to a per-round broadcast channel with self-echo enabled, so this player sees their own progress too', async () => {
     renderHook(() => useRaceProgress('round-1', 'me'))
 
     await waitFor(() =>
-      expect(mocks.channelFn).toHaveBeenCalledWith('race-progress:round-1'),
+      expect(mocks.channelFn).toHaveBeenCalledWith('race-progress:round-1', {
+        config: { broadcast: { self: true } },
+      }),
     )
     expect(mocks.channelMock.on).toHaveBeenCalledWith(
       'broadcast',

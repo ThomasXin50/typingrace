@@ -27,8 +27,13 @@ export function useRaceProgress(
   useEffect(() => {
     if (!roundId || !userId) return
 
+    // self: true - Realtime does not echo a client's own broadcasts back to
+    // it by default, which would otherwise leave this player's own track
+    // stuck at 0% forever (only ever hearing everyone else's updates).
     const channel = supabase
-      .channel(`race-progress:${roundId}`)
+      .channel(`race-progress:${roundId}`, {
+        config: { broadcast: { self: true } },
+      })
       .on('broadcast', { event: 'progress' }, ({ payload }) => {
         const { userId: fromUserId, progressPct } = payload as ProgressPayload
         setProgress((prev) => ({ ...prev, [fromUserId]: progressPct }))

@@ -228,7 +228,7 @@ describe('RacePage', () => {
     expect(bobDot).toHaveStyle({ left: '100%' })
   })
 
-  it('shows live results, including still-racing participants, below the typing run', () => {
+  it("shows placement and wpm alongside a finished participant's track, and nothing but the track itself for one still racing", () => {
     mocks.useActiveRound.mockReturnValue({
       round: {
         id: 'round-1',
@@ -273,12 +273,62 @@ describe('RacePage', () => {
 
     render(<RacePage roomId="room-1" />)
 
-    // "alice"/"bob" each appear twice now - once in the live progress
-    // track, once in the results list below it.
-    expect(screen.getAllByText('alice').length).toBeGreaterThan(0)
-    expect(screen.getByText('#1')).toBeInTheDocument()
-    expect(screen.getAllByText('bob').length).toBeGreaterThan(0)
-    expect(screen.getByText(/racing/i)).toBeInTheDocument()
+    expect(screen.getByText('alice')).toBeInTheDocument()
+    expect(screen.getByText('#1 · 90 wpm')).toBeInTheDocument()
+    expect(screen.getByText('bob')).toBeInTheDocument()
+    // No separate "Racing..." status text anywhere - the track position
+    // alone communicates that bob isn't finished yet.
+    expect(screen.queryByText(/racing/i)).not.toBeInTheDocument()
+  })
+
+  it('shows "You" instead of the current player\'s own username', () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'the quick brown fox',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+    mocks.useRoundResults.mockReturnValue({
+      results: [
+        {
+          user_id: 'me',
+          status: 'racing',
+          validation_status: null,
+          wpm: null,
+          placement: null,
+          field_size: 2,
+          username: 'thomasxin',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'racing',
+          validation_status: null,
+          wpm: null,
+          placement: null,
+          field_size: 2,
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    render(<RacePage roomId="room-1" />)
+
+    expect(screen.getByText('You')).toBeInTheDocument()
+    expect(screen.queryByText('thomasxin')).not.toBeInTheDocument()
+    expect(screen.getByText('bob')).toBeInTheDocument()
   })
 
   it('never passes an "already started" fallback to useCountdown while the round is still loading, which would otherwise flash the typing interface before the countdown renders (useCountdown\'s initial state is seeded once, from whatever it is first called with)', () => {
