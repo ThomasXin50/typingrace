@@ -29,6 +29,28 @@ describe('TypingRun', () => {
     expect(screen.getByText('100%')).toBeInTheDocument()
   })
 
+  it('calls onProgress with the current progress fraction on every keystroke, correct or not', async () => {
+    const onProgress = vi.fn()
+    render(<TypingRun content="abc" onProgress={onProgress} />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Typing input'), 'a')
+    expect(onProgress).toHaveBeenLastCalledWith(1 / 3)
+
+    await user.type(screen.getByLabelText('Typing input'), 'x') // wrong, still advances
+    expect(onProgress).toHaveBeenLastCalledWith(2 / 3)
+
+    await user.type(screen.getByLabelText('Typing input'), 'c')
+    expect(onProgress).toHaveBeenLastCalledWith(1)
+  })
+
+  it('does not call onProgress before the first keystroke', () => {
+    const onProgress = vi.fn()
+    render(<TypingRun content="abc" onProgress={onProgress} />)
+
+    expect(onProgress).not.toHaveBeenCalled()
+  })
+
   it('calls onFinish exactly once with the keystroke log and stats', async () => {
     const onFinish = vi.fn()
     render(<TypingRun content="ab" onFinish={onFinish} />)

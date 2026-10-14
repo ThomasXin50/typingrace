@@ -135,42 +135,119 @@
   gap: 2rem;
 }
 
-.race-results {
+.race-tracks {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
   padding: 0;
   margin: 0;
   list-style: none;
-  max-width: 28rem;
+  /* Matches .typing-test's max-width, so the tracks read as roughly the
+     same length as the text above them. */
+  max-width: 70ch;
 }
 
-.race-results__item {
+.race-track {
   display: flex;
   align-items: center;
   gap: 0.875rem;
-  padding: 0.625rem 0.875rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.9375rem;
 }
 
-.race-results__placement {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  color: var(--accent);
-  min-width: 3.5rem;
+.race-track__name {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  min-width: 6rem;
+  max-width: 6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.race-results__name {
+.race-track__line {
+  position: relative;
   flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
-.race-results__wpm {
+.race-track__fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease-out;
+}
+
+.race-track__dot {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px 1px color-mix(in oklch, var(--accent) 55%, transparent);
+  transform: translate(-50%, -50%);
+  transition: left 0.2s ease-out;
+}
+
+.race-track__dot::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--accent) 45%, transparent),
+    transparent 70%
+  );
+  filter: blur(2px);
+  animation: race-track-pulse 1.4s ease-in-out infinite;
+}
+
+.race-track__dot--finished::before {
+  animation: none;
+  opacity: 0;
+}
+
+@keyframes race-track-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .race-track__dot,
+  .race-track__fill {
+    transition: none;
+  }
+
+  .race-track__dot::before {
+    animation: none;
+  }
+}
+
+.race-track__result {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
   font-size: 0.8125rem;
+  white-space: nowrap;
+  /* Reserved regardless of whether a result is shown yet, so a finished
+     participant's row never shrinks its own track relative to everyone
+     else's - same "reserve the space" idea as .typing-hint-slot. */
+  min-width: 8rem;
+  text-align: right;
+}
+
+.race-page__lobby-countdown {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
 }
