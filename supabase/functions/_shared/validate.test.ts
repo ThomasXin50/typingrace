@@ -71,6 +71,37 @@ Deno.test(
   },
 )
 
+Deno.test(
+  "computeStats - measures duration from an externally-provided startTimestamp instead of the first keystroke, when given (races: the shared synchronized start, not this player's reaction time)",
+  () => {
+    const text = 'a'.repeat(25) // 5 words
+    const raceStart = 10_000
+    // Reacts 30s late, then types the rest spanning the remaining 60s.
+    const firstKeystroke = raceStart + 30_000
+    const keystrokes = typeText(text, firstKeystroke, 60_000 / 24)
+
+    const stats = computeStats(text, keystrokes, raceStart)
+
+    // 90s elapsed from raceStart to the finishing keystroke, not 60s from
+    // the first keystroke - so wpm is 5*(60/90), not 5.
+    assertEquals(stats.durationMs, 90_000)
+    assertEquals(stats.wpm, 10 / 3)
+  },
+)
+
+Deno.test(
+  "computeStats - without startTimestamp, duration is unaffected (matches today's solo behavior exactly)",
+  () => {
+    const text = 'a'.repeat(25)
+    const keystrokes = typeText(text, 0, 60_000 / 24)
+
+    const stats = computeStats(text, keystrokes)
+
+    assertEquals(stats.durationMs, 60_000)
+    assertEquals(stats.wpm, 5)
+  },
+)
+
 Deno.test('assessValidation - a clean, plausible run is verified', () => {
   const text = 'a'.repeat(25)
   const jitters = [100, 180, 90, 220, 140, 80, 200, 110, 160, 130]

@@ -34,6 +34,7 @@ const SUSPICIOUSLY_UNIFORM_CV = 0.15
 export function computeStats(
   text: string,
   keystrokes: Keystroke[],
+  startTimestamp?: number,
 ): TypingStats {
   let typed = ''
   let totalKeystrokes = 0
@@ -61,8 +62,13 @@ export function computeStats(
   }
 
   const finished = finishTimestamp !== null
+  // A race measures elapsed time from the synchronized start, not this
+  // player's own first keystroke - mirrors useTypingEngine's identical
+  // startTimestamp option on the client, so the server's anti-cheat
+  // verdict is computed against the same duration the player was shown.
+  const effectiveStart = startTimestamp ?? firstTimestamp
   const durationMs =
-    finished && firstTimestamp !== null ? finishTimestamp! - firstTimestamp : 0
+    finished && effectiveStart !== null ? finishTimestamp! - effectiveStart : 0
   const minutes = durationMs / 60_000
 
   let correctChars = 0

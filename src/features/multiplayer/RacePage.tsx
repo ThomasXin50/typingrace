@@ -1,6 +1,10 @@
+import { displayName } from '../../lib/displayName'
 import { TypingRun } from '../typing/TypingRun'
+import type { Keystroke } from '../typing/useTypingEngine'
 import { useActiveRound } from './useActiveRound'
 import { useCountdown } from './useCountdown'
+import { useRoundResults } from './useRoundResults'
+import { useSubmitRoundRun } from './useSubmitRoundRun'
 import { useText } from './useText'
 import './multiplayer.css'
 
@@ -29,6 +33,8 @@ export function RacePage({ roomId }: RacePageProps) {
     error: textError,
   } = useText(round?.text_id ?? null)
   const countdown = useCountdown(round?.started_at ?? PENDING_ROUND_PLACEHOLDER)
+  const { results } = useRoundResults(round?.id ?? null)
+  const submitRoundRun = useSubmitRoundRun()
 
   if (roundLoading || (round && textLoading)) {
     return <p className="page-status">Loading race…</p>
@@ -58,11 +64,38 @@ export function RacePage({ roomId }: RacePageProps) {
     )
   }
 
+  function handleFinish(keystrokes: Keystroke[]) {
+    submitRoundRun.submit(round!.id, keystrokes)
+  }
+
   return (
-    <TypingRun
-      content={content}
-      now={() => Date.now()}
-      startTimestamp={Date.parse(round.started_at)}
-    />
+    <div className="race-page">
+      <TypingRun
+        content={content}
+        now={() => Date.now()}
+        startTimestamp={Date.parse(round.started_at)}
+        onFinish={handleFinish}
+      />
+
+      {results.length > 0 && (
+        <ul className="race-results">
+          {results.map((r) => (
+            <li key={r.user_id} className="race-results__item">
+              <span className="race-results__placement">
+                {r.placement ? `#${r.placement}` : 'Racing…'}
+              </span>
+              <span className="race-results__name">
+                {displayName(r, results)}
+              </span>
+              {r.wpm !== null && (
+                <span className="race-results__wpm">
+                  {Math.round(r.wpm)} wpm
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
