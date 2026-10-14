@@ -70,6 +70,32 @@ describe('computeWpmSeries', () => {
     expect(stalledBucket?.wpm).toBe(0)
   })
 
+  it('never produces two points with the same timeSec, even when the run finishes mid-second', () => {
+    const text = 'a'.repeat(10)
+    // Finishes at 5345ms - the last (partial) bucket only covers
+    // [5000, 5345), which rounds to the same second as the prior full
+    // bucket [4000, 5000) if timeSec is computed via Math.round() instead
+    // of being derived from the bucket index.
+    const keystrokes: Keystroke[] = [
+      { key: 'a', timestamp: 0, trusted: true },
+      { key: 'a', timestamp: 1000, trusted: true },
+      { key: 'a', timestamp: 2000, trusted: true },
+      { key: 'a', timestamp: 3000, trusted: true },
+      { key: 'a', timestamp: 4000, trusted: true },
+      { key: 'a', timestamp: 4300, trusted: true },
+      { key: 'a', timestamp: 4600, trusted: true },
+      { key: 'a', timestamp: 4900, trusted: true },
+      { key: 'a', timestamp: 5100, trusted: true },
+      { key: 'a', timestamp: 5345, trusted: true },
+    ]
+
+    const series = computeWpmSeries(text, keystrokes)
+    const timeSecs = series.map((p) => p.timeSec)
+
+    expect(new Set(timeSecs).size).toBe(timeSecs.length)
+    expect(timeSecs).toEqual([1, 2, 3, 4, 5, 6])
+  })
+
   it('never reports negative wpm even when a bucket nets backward', () => {
     const text = 'a'.repeat(25)
     const keystrokes: Keystroke[] = [

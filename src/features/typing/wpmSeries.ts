@@ -81,7 +81,11 @@ export function computeWpmSeries(
     const minutes = actualBucketMs / 60_000
 
     points.push({
-      timeSec: Math.round((bucketEnd - firstTimestamp) / 1000),
+      // Derived from the bucket index, not rounded from bucketEnd - a
+      // short trailing bucket (the run didn't finish on a whole second)
+      // would otherwise round down to the same second as the prior bucket,
+      // producing two points at an identical timeSec.
+      timeSec: b + 1,
       wpm: minutes > 0 ? delta / WORD_LENGTH / minutes : 0,
     })
   }
