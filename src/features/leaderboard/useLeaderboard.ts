@@ -8,6 +8,7 @@ export interface LeaderboardEntry {
   avg_wpm: number
   best_wpm: number
   rank: number
+  is_anonymous: boolean
 }
 
 interface UseLeaderboardResult {
