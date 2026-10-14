@@ -19,6 +19,14 @@ interface TypingRunProps {
    * remount) so holding Tab and tapping Enter repeatedly keeps working across
    * skips. Defaults to an internal ref for standalone use. */
   tabHeldRef?: { current: boolean }
+  /** Timestamp source for keystrokes. Defaults to the native event's own
+   * timeStamp (performance.now()-relative) for solo/practice. A race passes
+   * `() => Date.now()` instead, so timestamps are directly comparable to
+   * the round's wall-clock startTimestamp. */
+  now?: () => number
+  /** Forwarded to useTypingEngine - see its startTimestamp option. Only
+   * meaningful alongside a wall-clock `now`. */
+  startTimestamp?: number
 }
 
 export function TypingRun({
@@ -27,8 +35,10 @@ export function TypingRun({
   onSkip,
   footer,
   tabHeldRef: externalTabHeldRef,
+  now,
+  startTimestamp,
 }: TypingRunProps) {
-  const engine = useTypingEngine(content)
+  const engine = useTypingEngine(content, { startTimestamp })
   const inputRef = useRef<HTMLInputElement>(null)
   const internalTabHeldRef = useRef(false)
   const tabHeldRef = externalTabHeldRef ?? internalTabHeldRef
@@ -70,7 +80,7 @@ export function TypingRun({
     e.preventDefault()
     engine.handleKeyDown({
       key: e.key,
-      timestamp: e.nativeEvent.timeStamp,
+      timestamp: now ? now() : e.nativeEvent.timeStamp,
       trusted: e.nativeEvent.isTrusted,
     })
   }

@@ -115,6 +115,43 @@ describe('useTypingEngine', () => {
     expect(result.current.keystrokes).toEqual(keystrokesAfterFinish)
   })
 
+  it('computes duration against an externally-provided startTimestamp instead of the first keystroke, when given', () => {
+    const text = 'a'.repeat(25) // 5 "words"
+    const raceStart = 10_000 // wall-clock ms, e.g. Date.parse(round.started_at)
+    const { result } = renderHook(() =>
+      useTypingEngine(text, { startTimestamp: raceStart }),
+    )
+
+    // The player's own first keystroke lands 30s after the official start -
+    // a late reaction should count against them, not reset the clock.
+    const firstKeystroke = raceStart + 30_000
+    const interval = 60_000 / 24 // 24 intervals spans the rest of 60s total
+    for (let i = 0; i < text.length; i++) {
+      act(() =>
+        result.current.handleKeyDown(press('a', firstKeystroke + i * interval)),
+      )
+    }
+
+    expect(result.current.status).toBe('finished')
+    // Elapsed from raceStart to the last keystroke is 90s, not 60s from the
+    // first keystroke - so wpm is 5*(60/90) = 10/3, not 5.
+    expect(result.current.stats?.durationMs).toBe(90_000)
+    expect(result.current.stats?.wpm).toBeCloseTo(10 / 3)
+  })
+
+  it("without startTimestamp, duration is unaffected (matches today's solo behavior exactly)", () => {
+    const text = 'a'.repeat(25)
+    const { result } = renderHook(() => useTypingEngine(text))
+
+    const interval = 60_000 / 24
+    for (let i = 0; i < text.length; i++) {
+      act(() => result.current.handleKeyDown(press('a', i * interval)))
+    }
+
+    expect(result.current.stats?.durationMs).toBe(60_000)
+    expect(result.current.stats?.wpm).toBe(5)
+  })
+
   it('reset returns to the idle state and clears the keystroke log', () => {
     const { result } = renderHook(() => useTypingEngine('ab'))
 

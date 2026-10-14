@@ -99,6 +99,52 @@ describe('TypingRun', () => {
     expect(onSkip).not.toHaveBeenCalled()
   })
 
+  it('uses an injected now() for keystroke timestamps instead of the native event timestamp, when given', async () => {
+    const onFinish = vi.fn()
+    let tick = 10_000
+    const now = () => {
+      tick += 1000
+      return tick
+    }
+
+    render(<TypingRun content="ab" onFinish={onFinish} now={now} />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Typing input'), 'ab')
+
+    const [keystrokes] = onFinish.mock.calls[0]
+    expect(keystrokes.map((k: { timestamp: number }) => k.timestamp)).toEqual([
+      11000, 12000,
+    ])
+  })
+
+  it('forwards startTimestamp into the typing engine for duration calculation', async () => {
+    const onFinish = vi.fn()
+    let tick = 0
+    const now = () => {
+      tick += 30_000
+      return tick
+    }
+
+    render(
+      <TypingRun
+        content="ab"
+        onFinish={onFinish}
+        now={now}
+        startTimestamp={0}
+      />,
+    )
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Typing input'), 'ab')
+
+    const [, stats] = onFinish.mock.calls[0]
+    // Both keystrokes are injected at +30s/+60s; duration from
+    // startTimestamp=0 to the finishing keystroke (60s) is 60000ms, not
+    // 30000ms (which it would be if measured from the first keystroke).
+    expect(stats.durationMs).toBe(60_000)
+  })
+
   it('an externally-owned tabHeldRef keeps "Tab held" true across a skip remount, so repeated Enters keep working without re-pressing Tab', () => {
     const onSkip = vi.fn()
     const tabHeldRef = { current: false }
