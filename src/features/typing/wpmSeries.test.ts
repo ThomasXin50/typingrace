@@ -122,6 +122,28 @@ describe('computeWpmSeries', () => {
     expect(withoutStart.at(-1)?.timeSec).toBe(9)
   })
 
+  it('tracks net (error-adjusted) and raw progress separately, diverging only in a bucket with an uncorrected typo', () => {
+    const text = 'a'.repeat(15)
+    const keystrokes: Keystroke[] = [
+      ...typeText('a'.repeat(14), 0, 1000), // 14 correct chars, one per second
+      { key: 'x', timestamp: 14000, trusted: true }, // wrong, but finishes - never corrected
+    ]
+
+    const series = computeWpmSeries(text, keystrokes)
+
+    // Every bucket before the typo: raw and net agree (nothing but correct
+    // progress happened in them).
+    for (const point of series.slice(0, -1)) {
+      expect(point.rawWpm).toBeCloseTo(point.wpm)
+    }
+
+    // The bucket containing the uncorrected typo: raw counts it as
+    // progress (it advanced the cursor), net doesn't (it's wrong and
+    // never fixed) - raw must read higher.
+    const last = series.at(-1)!
+    expect(last.rawWpm).toBeGreaterThan(last.wpm)
+  })
+
   it('never reports negative wpm even when a bucket nets backward', () => {
     const text = 'a'.repeat(25)
     const keystrokes: Keystroke[] = [

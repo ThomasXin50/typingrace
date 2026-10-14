@@ -1,4 +1,11 @@
-import type { WpmPoint } from './wpmSeries'
+// Deliberately not WpmPoint from wpmSeries.ts - the chart math only ever
+// plots a single already-chosen value per timestamp (net or raw wpm, after
+// WpmChart resolves the toggle), so it stays agnostic to which field that
+// value came from rather than depending on wpmSeries' full data shape.
+export interface ChartPoint {
+  timeSec: number
+  wpm: number
+}
 
 export const WIDTH = 600
 export const HEIGHT = 160
@@ -13,7 +20,7 @@ export function niceMax(value: number): number {
   return Math.max(20, Math.ceil(value / 10) * 10)
 }
 
-export function withOrigin(points: WpmPoint[]): WpmPoint[] {
+export function withOrigin(points: ChartPoint[]): ChartPoint[] {
   return [{ timeSec: 0, wpm: 0 }, ...points]
 }
 
@@ -33,7 +40,7 @@ export function nearestIndexForClientX(
   clientX: number,
   rectLeft: number,
   rectWidth: number,
-  series: WpmPoint[],
+  series: ChartPoint[],
   maxTime: number,
 ): number {
   const px = ((clientX - rectLeft) / rectWidth) * WIDTH
