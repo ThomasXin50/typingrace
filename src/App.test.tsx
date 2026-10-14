@@ -30,6 +30,14 @@ vi.mock('./features/profile/ProfilePage', () => ({
   ProfilePage: () => <div>profile page</div>,
 }))
 
+vi.mock('./features/multiplayer/MultiplayerPage', () => ({
+  MultiplayerPage: () => <div>multiplayer page</div>,
+}))
+
+vi.mock('./features/multiplayer/RoomPage', () => ({
+  RoomPage: () => <div>room page</div>,
+}))
+
 describe('App', () => {
   afterEach(() => {
     window.history.pushState({}, '', '/')
