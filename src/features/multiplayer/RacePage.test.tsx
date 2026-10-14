@@ -9,7 +9,10 @@ const mocks = vi.hoisted(() => ({
   useCountdown: vi.fn(),
   useRoundResults: vi.fn(),
   useSubmitRoundRun: vi.fn(),
+  useRaceProgress: vi.fn(),
+  useProfile: vi.fn(),
   submit: vi.fn(),
+  sendProgress: vi.fn(),
 }))
 
 vi.mock('./useActiveRound', () => ({ useActiveRound: mocks.useActiveRound }))
@@ -19,6 +22,10 @@ vi.mock('./useRoundResults', () => ({ useRoundResults: mocks.useRoundResults }))
 vi.mock('./useSubmitRoundRun', () => ({
   useSubmitRoundRun: mocks.useSubmitRoundRun,
 }))
+vi.mock('./useRaceProgress', () => ({
+  useRaceProgress: mocks.useRaceProgress,
+}))
+vi.mock('../auth/useProfile', () => ({ useProfile: mocks.useProfile }))
 
 describe('RacePage', () => {
   beforeEach(() => {
@@ -33,6 +40,15 @@ describe('RacePage', () => {
       result: null,
       error: null,
       submit: mocks.submit,
+    })
+    mocks.useRaceProgress.mockReturnValue({
+      progress: {},
+      sendProgress: mocks.sendProgress,
+    })
+    mocks.useProfile.mockReturnValue({
+      profile: { id: 'me', username: 'me', isAnonymous: false },
+      loading: false,
+      error: null,
     })
   })
 
@@ -129,6 +145,89 @@ describe('RacePage', () => {
     expect(mocks.submit).toHaveBeenCalledWith('round-1', expect.any(Array))
   })
 
+  it('broadcasts live progress on every keystroke', async () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: new Date(Date.now() - 5000).toISOString(),
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'ab',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+
+    render(<RacePage roomId="room-1" />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Typing input'), 'a')
+
+    expect(mocks.sendProgress).toHaveBeenCalledWith(0.5)
+  })
+
+  it('shows a live progress track for every participant, positioned by their broadcast progress', () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'the quick brown fox',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+    mocks.useRoundResults.mockReturnValue({
+      results: [
+        {
+          user_id: 'alice',
+          status: 'racing',
+          validation_status: null,
+          wpm: null,
+          placement: null,
+          field_size: 2,
+          username: 'alice',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'finished',
+          validation_status: 'verified',
+          wpm: 80,
+          placement: 1,
+          field_size: 2,
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+    mocks.useRaceProgress.mockReturnValue({
+      progress: { alice: 0.3 },
+      sendProgress: mocks.sendProgress,
+    })
+
+    render(<RacePage roomId="room-1" />)
+
+    const tracks = screen.getAllByTestId('race-track-dot')
+    const aliceDot = tracks.find((el) => el.dataset.userId === 'alice')
+    const bobDot = tracks.find((el) => el.dataset.userId === 'bob')
+
+    expect(aliceDot).toHaveStyle({ left: '30%' })
+    // bob has finished - shown at 100% regardless of their last broadcast.
+    expect(bobDot).toHaveStyle({ left: '100%' })
+  })
+
   it('shows live results, including still-racing participants, below the typing run', () => {
     mocks.useActiveRound.mockReturnValue({
       round: {
@@ -174,9 +273,11 @@ describe('RacePage', () => {
 
     render(<RacePage roomId="room-1" />)
 
-    expect(screen.getByText('alice')).toBeInTheDocument()
+    // "alice"/"bob" each appear twice now - once in the live progress
+    // track, once in the results list below it.
+    expect(screen.getAllByText('alice').length).toBeGreaterThan(0)
     expect(screen.getByText('#1')).toBeInTheDocument()
-    expect(screen.getByText('bob')).toBeInTheDocument()
+    expect(screen.getAllByText('bob').length).toBeGreaterThan(0)
     expect(screen.getByText(/racing/i)).toBeInTheDocument()
   })
 

@@ -21,6 +21,12 @@ interface TypingRunProps {
   content: string
   onFinish?: (keystrokes: Keystroke[], stats: TypingStats) => void
   onSkip?: () => void
+  /** Fired on every keystroke (correct or not - a struggling-but-still-
+   * typing player still counts as active) with the current progress
+   * fraction through the text, 0-1. Never fired before the first
+   * keystroke. Intended for broadcasting live race progress; omit for
+   * solo/practice. */
+  onProgress?: (progressPct: number) => void
   footer?: ReactNode
   /** Tracks whether Tab is currently held, for the tab+enter skip shortcut.
    * Skipping remounts TypingRun with a fresh instance, which would otherwise
@@ -42,6 +48,7 @@ export function TypingRun({
   content,
   onFinish,
   onSkip,
+  onProgress,
   footer,
   tabHeldRef: externalTabHeldRef,
   now,
@@ -84,6 +91,13 @@ export function TypingRun({
     // locks out further events after), so only that transition matters here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.status])
+
+  useEffect(() => {
+    if (engine.keystrokes.length === 0) return
+    onProgress?.(engine.typed.length / content.length)
+    // Fires once per keystroke, not on every unrelated re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.keystrokes])
 
   const wpmSeries = useMemo(
     () =>

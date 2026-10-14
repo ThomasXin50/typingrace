@@ -1,8 +1,10 @@
 import { displayName } from '../../lib/displayName'
+import { useProfile } from '../auth/useProfile'
 import { TypingRun } from '../typing/TypingRun'
 import type { Keystroke } from '../typing/useTypingEngine'
 import { useActiveRound } from './useActiveRound'
 import { useCountdown } from './useCountdown'
+import { useRaceProgress } from './useRaceProgress'
 import { useRoundResults } from './useRoundResults'
 import { useSubmitRoundRun } from './useSubmitRoundRun'
 import { useText } from './useText'
@@ -35,6 +37,11 @@ export function RacePage({ roomId }: RacePageProps) {
   const countdown = useCountdown(round?.started_at ?? PENDING_ROUND_PLACEHOLDER)
   const { results } = useRoundResults(round?.id ?? null)
   const submitRoundRun = useSubmitRoundRun()
+  const { profile } = useProfile()
+  const { progress, sendProgress } = useRaceProgress(
+    round?.id ?? null,
+    profile?.id ?? null,
+  )
 
   if (roundLoading || (round && textLoading)) {
     return <p className="page-status">Loading race…</p>
@@ -75,7 +82,35 @@ export function RacePage({ roomId }: RacePageProps) {
         now={() => Date.now()}
         startTimestamp={Date.parse(round.started_at)}
         onFinish={handleFinish}
+        onProgress={sendProgress}
       />
+
+      {results.length > 0 && (
+        <ul className="race-tracks">
+          {results.map((r) => {
+            const pct = r.status === 'finished' ? 1 : (progress[r.user_id] ?? 0)
+            return (
+              <li key={r.user_id} className="race-track">
+                <span className="race-track__name">
+                  {displayName(r, results)}
+                </span>
+                <div className="race-track__line">
+                  <span
+                    className={
+                      r.status === 'finished'
+                        ? 'race-track__dot race-track__dot--finished'
+                        : 'race-track__dot'
+                    }
+                    data-testid="race-track-dot"
+                    data-user-id={r.user_id}
+                    style={{ left: `${pct * 100}%` }}
+                  />
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
 
       {results.length > 0 && (
         <ul className="race-results">
