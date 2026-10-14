@@ -424,3 +424,21 @@ entrypoint = "./functions/submit-solo-run/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/submit-solo-run/*.html" ]
+
+[functions.create-room]
+enabled = true
+verify_jwt = false
+import_map = "./functions/create-room/deno.json"
+entrypoint = "./functions/create-room/index.ts"
+
+[functions.join-room]
+enabled = true
+verify_jwt = false
+import_map = "./functions/join-room/deno.json"
+entrypoint = "./functions/join-room/index.ts"
+
+[functions.leave-room]
+enabled = true
+verify_jwt = false
+import_map = "./functions/leave-room/deno.json"
+entrypoint = "./functions/leave-room/index.ts"

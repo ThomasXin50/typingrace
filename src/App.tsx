@@ -5,6 +5,7 @@ import { useProfile } from './features/auth/useProfile'
 import { HomePage } from './features/home/HomePage'
 import { LeaderboardPage } from './features/leaderboard/LeaderboardPage'
 import { MultiplayerPage } from './features/multiplayer/MultiplayerPage'
+import { RoomPage } from './features/multiplayer/RoomPage'
 import { PracticePage } from './features/practice/PracticePage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { SoloPage } from './features/solo/SoloPage'
@@ -32,6 +33,7 @@ function App() {
             <Route path="/practice" element={<PracticePage />} />
             <Route path="/leaderboards" element={<LeaderboardPage />} />
             <Route path="/multiplayer" element={<MultiplayerPage />} />
+            <Route path="/multiplayer/:roomId" element={<RoomPage />} />
             <Route path="/profile" element={<ProfilePage />} />
           </Routes>
         )}
