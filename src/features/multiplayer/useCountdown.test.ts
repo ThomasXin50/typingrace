@@ -54,4 +54,24 @@ describe('useCountdown', () => {
     expect(result.current.hasStarted).toBe(true)
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it('resyncs immediately when startedAt changes to a genuinely different value, without waiting for the next tick (a caller that initially renders with a placeholder, then the real value once data loads, must never show a stale number in between)', () => {
+    const { result, rerender } = renderHook(
+      ({ startedAt }) => useCountdown(startedAt),
+      { initialProps: { startedAt: '2099-01-01T00:00:00.000Z' } },
+    )
+
+    // Placeholder read as "far from started" - this is the state a caller
+    // would see while still loading real data.
+    expect(result.current.hasStarted).toBe(false)
+
+    // The real round data arrives: 5s out from "now".
+    rerender({ startedAt: '2026-01-01T00:00:05.000Z' })
+
+    // Must reflect the real value synchronously on this same render, not
+    // the placeholder's multi-decade-away remaining time, and not 0
+    // either - both would be visibly wrong before the next tick.
+    expect(result.current.msRemaining).toBe(5000)
+    expect(result.current.hasStarted).toBe(false)
+  })
 })
