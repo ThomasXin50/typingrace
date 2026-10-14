@@ -1,9 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TypingRun } from './TypingRun'
 
 describe('TypingRun', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('shows a start hint before typing begins, which disappears once it does', async () => {
     render(<TypingRun content="abc" />)
 
@@ -118,13 +122,43 @@ describe('TypingRun', () => {
     ])
   })
 
+  it('shows a live ticking elapsed-time clock immediately once startTimestamp is given, instead of waiting for the first keystroke', () => {
+    vi.useFakeTimers()
+    let tick = 10_000
+    const now = () => tick
+
+    render(<TypingRun content="abc" now={now} startTimestamp={10_000} />)
+
+    expect(screen.queryByText(/start typing to begin/i)).not.toBeInTheDocument()
+    expect(screen.getByText('0:00')).toBeInTheDocument()
+
+    tick = 13_000
+    act(() => {
+      vi.advanceTimersByTime(3000)
+    })
+
+    expect(screen.getByText('0:03')).toBeInTheDocument()
+  })
+
+  it('stops the live clock once finished', async () => {
+    const now = () => Date.now()
+
+    render(<TypingRun content="ab" now={now} startTimestamp={Date.now()} />)
+    const user = userEvent.setup()
+
+    await user.type(screen.getByLabelText('Typing input'), 'ab')
+
+    expect(screen.getByText('wpm')).toBeInTheDocument()
+    expect(screen.queryByText(/^\d:\d\d$/)).not.toBeInTheDocument()
+  })
+
   it('forwards startTimestamp into the typing engine for duration calculation', async () => {
     const onFinish = vi.fn()
+    // Explicitly controlled per keystroke (not auto-incrementing on every
+    // call) so this stays correct regardless of other, unrelated calls to
+    // now() the component also makes (e.g. the live race-clock display).
     let tick = 0
-    const now = () => {
-      tick += 30_000
-      return tick
-    }
+    const now = () => tick
 
     render(
       <TypingRun
@@ -135,13 +169,17 @@ describe('TypingRun', () => {
       />,
     )
     const user = userEvent.setup()
+    const input = screen.getByLabelText('Typing input')
 
-    await user.type(screen.getByLabelText('Typing input'), 'ab')
+    tick = 30_000
+    await user.type(input, 'a')
+    tick = 60_000
+    await user.type(input, 'b')
 
     const [, stats] = onFinish.mock.calls[0]
-    // Both keystrokes are injected at +30s/+60s; duration from
-    // startTimestamp=0 to the finishing keystroke (60s) is 60000ms, not
-    // 30000ms (which it would be if measured from the first keystroke).
+    // Both keystrokes land at +30s/+60s; duration from startTimestamp=0 to
+    // the finishing keystroke (60s) is 60000ms, not 30000ms (which it would
+    // be if measured from the first keystroke instead).
     expect(stats.durationMs).toBe(60_000)
   })
 
