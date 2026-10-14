@@ -67,18 +67,26 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
     profile?.id ?? null,
   )
 
-  const [hasFinished, setHasFinished] = useState(false)
+  // True once the live round has closed out - not "this player personally
+  // finished" (others may still be racing when that happens). Everyone
+  // hits this transition together, from the same shared signal (the round
+  // leaving 'active'), which is what makes the countdown below actually
+  // synchronized across participants instead of starting independently
+  // whenever each of them happens to finish typing.
+  const [roundClosed, setRoundClosed] = useState(false)
+  if (effectiveRound && !round && !roundClosed) setRoundClosed(true)
+
   const [lobbyCountdown, setLobbyCountdown] = useState(BACK_TO_LOBBY_SECONDS)
 
   useEffect(() => {
-    if (!hasFinished) return
+    if (!roundClosed) return
     if (lobbyCountdown <= 0) {
       onDone?.()
       return
     }
     const timer = setTimeout(() => setLobbyCountdown((s) => s - 1), 1000)
     return () => clearTimeout(timer)
-  }, [hasFinished, lobbyCountdown, onDone])
+  }, [roundClosed, lobbyCountdown, onDone])
 
   if (roundLoading || (round && textLoading)) {
     return <p className="page-status">Loading race…</p>
@@ -110,7 +118,6 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
 
   function handleFinish(keystrokes: Keystroke[]) {
     submitRoundRun.submit(effectiveRound!.id, keystrokes)
-    setHasFinished(true)
   }
 
   return (
@@ -161,7 +168,7 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
         </ul>
       )}
 
-      {hasFinished && (
+      {roundClosed && (
         <p className="race-page__lobby-countdown">
           Back to lobby in {lobbyCountdown}…
         </p>

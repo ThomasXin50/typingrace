@@ -390,7 +390,34 @@ describe('RacePage', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('shows a "back to lobby" grace-period countdown once the player finishes, and calls onDone once it elapses - so the last player to finish still gets a moment to see their own results instead of being yanked back to the lobby the instant the room flips', () => {
+  it('does not start the "back to lobby" countdown just because this player personally finished - other participants may still be racing', () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: new Date(Date.now() - 5000).toISOString(),
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'ab',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+
+    render(<RacePage roomId="room-1" />)
+    const input = screen.getByLabelText('Typing input')
+
+    fireEvent.keyDown(input, { key: 'a' })
+    fireEvent.keyDown(input, { key: 'b' })
+
+    expect(screen.getByText('wpm')).toBeInTheDocument()
+    expect(screen.queryByText(/back to lobby in/i)).not.toBeInTheDocument()
+  })
+
+  it('starts the "back to lobby" countdown once the round itself closes out (not before), and calls onDone once it elapses - so every participant leaves together once the round is actually done, rather than whenever each of them personally happens to finish typing', () => {
     // Fake timers from the start, before anything schedules a real
     // setTimeout - switching to fake timers partway through would orphan
     // whatever real timer the finish effect already scheduled, leaving
@@ -415,11 +442,23 @@ describe('RacePage', () => {
     mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
     const onDone = vi.fn()
 
-    render(<RacePage roomId="room-1" onDone={onDone} />)
+    const { rerender } = render(<RacePage roomId="room-1" onDone={onDone} />)
     const input = screen.getByLabelText('Typing input')
 
     fireEvent.keyDown(input, { key: 'a' })
     fireEvent.keyDown(input, { key: 'b' })
+
+    expect(screen.queryByText(/back to lobby in/i)).not.toBeInTheDocument()
+
+    // The round closes out once everyone (not just this player) has
+    // finished - useActiveRound's own query, which only ever matches a
+    // still-'active' round, stops returning it.
+    mocks.useActiveRound.mockReturnValue({
+      round: null,
+      loading: false,
+      error: null,
+    })
+    rerender(<RacePage roomId="room-1" onDone={onDone} />)
 
     expect(screen.getByText(/back to lobby in/i)).toBeInTheDocument()
     expect(onDone).not.toHaveBeenCalled()
