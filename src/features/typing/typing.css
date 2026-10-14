@@ -24,6 +24,12 @@
   margin: 0;
 }
 
+.typing-status--clock {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
 .typing-text-wrap {
   position: relative;
   cursor: text;

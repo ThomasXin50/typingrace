@@ -1,14 +1,19 @@
 import { useNavigate, useParams } from 'react-router-dom'
 import { displayName } from '../../lib/displayName'
+import { useProfile } from '../auth/useProfile'
+import { RacePage } from './RacePage'
 import { useLeaveRoom } from './useLeaveRoom'
 import { useRoom } from './useRoom'
+import { useStartRace } from './useStartRace'
 import './multiplayer.css'
 
 export function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
   const navigate = useNavigate()
+  const { profile } = useProfile()
   const { room, members, loading, error } = useRoom(roomId!)
   const leaveRoomState = useLeaveRoom()
+  const startRaceState = useStartRace()
 
   if (loading) {
     return <p className="page-status">Loading room…</p>
@@ -22,10 +27,15 @@ export function RoomPage() {
     )
   }
 
+  if (room.status === 'racing') {
+    return <RacePage roomId={room.id} />
+  }
+
   const listing = members.map((m) => ({
     user_id: m.user_id,
     is_anonymous: m.is_anonymous,
   }))
+  const isHost = profile?.id === room.host_id
 
   return (
     <div className="room-page">
@@ -47,6 +57,22 @@ export function RoomPage() {
           </li>
         ))}
       </ul>
+
+      {isHost && (
+        <button
+          type="button"
+          className="btn"
+          disabled={startRaceState.starting}
+          onClick={() => startRaceState.startRace(room.id)}
+        >
+          {startRaceState.starting ? 'Starting…' : 'Start Race'}
+        </button>
+      )}
+      {startRaceState.error && (
+        <p className="page-status" role="alert">
+          {startRaceState.error}
+        </p>
+      )}
 
       <button
         type="button"

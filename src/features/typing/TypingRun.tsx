@@ -8,6 +8,15 @@ import { WpmChart } from './WpmChart'
 import { computeWpmSeries } from './wpmSeries'
 import './typing.css'
 
+const RACE_CLOCK_TICK_MS = 200
+
+function formatElapsed(ms: number): string {
+  const totalSeconds = Math.floor(Math.max(0, ms) / 1000)
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
 interface TypingRunProps {
   content: string
   onFinish?: (keystrokes: Keystroke[], stats: TypingStats) => void
@@ -19,6 +28,14 @@ interface TypingRunProps {
    * remount) so holding Tab and tapping Enter repeatedly keeps working across
    * skips. Defaults to an internal ref for standalone use. */
   tabHeldRef?: { current: boolean }
+  /** Timestamp source for keystrokes. Defaults to the native event's own
+   * timeStamp (performance.now()-relative) for solo/practice. A race passes
+   * `() => Date.now()` instead, so timestamps are directly comparable to
+   * the round's wall-clock startTimestamp. */
+  now?: () => number
+  /** Forwarded to useTypingEngine - see its startTimestamp option. Only
+   * meaningful alongside a wall-clock `now`. */
+  startTimestamp?: number
 }
 
 export function TypingRun({
@@ -27,16 +44,37 @@ export function TypingRun({
   onSkip,
   footer,
   tabHeldRef: externalTabHeldRef,
+  now,
+  startTimestamp,
 }: TypingRunProps) {
-  const engine = useTypingEngine(content)
+  const engine = useTypingEngine(content, { startTimestamp })
   const inputRef = useRef<HTMLInputElement>(null)
   const internalTabHeldRef = useRef(false)
   const tabHeldRef = externalTabHeldRef ?? internalTabHeldRef
   const [focused, setFocused] = useState(false)
+  // A race's clock starts the instant this mounts (right as the
+  // synchronized countdown elapses), not on the player's first keystroke -
+  // the lazy initializer captures that immediately; the interval keeps it
+  // ticking so it's visibly live rather than looking stalled while idle.
+  const [elapsedMs, setElapsedMs] = useState(() =>
+    startTimestamp !== undefined
+      ? (now ? now() : Date.now()) - startTimestamp
+      : 0,
+  )
 
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    if (startTimestamp === undefined || engine.status === 'finished') return
+
+    const interval = setInterval(() => {
+      setElapsedMs((now ? now() : Date.now()) - startTimestamp)
+    }, RACE_CLOCK_TICK_MS)
+
+    return () => clearInterval(interval)
+  }, [startTimestamp, engine.status, now])
 
   useEffect(() => {
     if (engine.status === 'finished' && engine.stats) {
@@ -50,9 +88,9 @@ export function TypingRun({
   const wpmSeries = useMemo(
     () =>
       engine.status === 'finished'
-        ? computeWpmSeries(content, engine.keystrokes)
+        ? computeWpmSeries(content, engine.keystrokes, startTimestamp)
         : [],
-    [engine.status, content, engine.keystrokes],
+    [engine.status, content, engine.keystrokes, startTimestamp],
   )
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -70,7 +108,7 @@ export function TypingRun({
     e.preventDefault()
     engine.handleKeyDown({
       key: e.key,
-      timestamp: e.nativeEvent.timeStamp,
+      timestamp: now ? now() : e.nativeEvent.timeStamp,
       trusted: e.nativeEvent.isTrusted,
     })
   }
@@ -84,11 +122,19 @@ export function TypingRun({
   return (
     <div className="typing-test">
       <div className="typing-hint-slot">
-        {engine.status === 'idle' && !showOverlay && (
-          <p className="typing-status typing-status--hint">
-            Start typing to begin
-          </p>
-        )}
+        {startTimestamp !== undefined
+          ? engine.status !== 'finished' &&
+            !showOverlay && (
+              <p className="typing-status typing-status--hint typing-status--clock">
+                {formatElapsed(elapsedMs)}
+              </p>
+            )
+          : engine.status === 'idle' &&
+            !showOverlay && (
+              <p className="typing-status typing-status--hint">
+                Start typing to begin
+              </p>
+            )}
       </div>
 
       <div

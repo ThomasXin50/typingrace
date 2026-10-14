@@ -104,3 +104,27 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+.race-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3rem 0;
+}
+
+.race-countdown__label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.race-countdown__number {
+  font-family: var(--font-mono);
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}

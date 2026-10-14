@@ -442,3 +442,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/leave-room/deno.json"
 entrypoint = "./functions/leave-room/index.ts"
+
+[functions.start-race]
+enabled = true
+verify_jwt = false
+import_map = "./functions/start-race/deno.json"
+entrypoint = "./functions/start-race/index.ts"

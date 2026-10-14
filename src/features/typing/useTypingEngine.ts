@@ -43,7 +43,11 @@ function computeCharStatuses(text: string, typed: string): CharStatus[] {
  * finish-lock behavior) so the live preview and the server-authoritative
  * validation can never silently disagree.
  */
-function replay(text: string, keystrokes: Keystroke[]) {
+function replay(
+  text: string,
+  keystrokes: Keystroke[],
+  startTimestamp?: number,
+) {
   let typed = ''
   let totalKeystrokes = 0
   let mistakeCount = 0
@@ -71,18 +75,34 @@ function replay(text: string, keystrokes: Keystroke[]) {
   }
 
   const finished = finishTimestamp !== null
+  // A race's elapsed time is measured from the synchronized start everyone
+  // agreed on, not this player's own first keystroke - a slow reaction
+  // should count against them rather than quietly resetting their clock.
+  const effectiveStart = startTimestamp ?? firstTimestamp
   const durationMs =
-    finished && firstTimestamp !== null ? finishTimestamp! - firstTimestamp : 0
+    finished && effectiveStart !== null ? finishTimestamp! - effectiveStart : 0
 
   return { typed, totalKeystrokes, mistakeCount, finished, durationMs }
 }
 
-export function useTypingEngine(text: string): UseTypingEngineResult {
+interface UseTypingEngineOptions {
+  /** Wall-clock ms (e.g. Date.parse(round.started_at)) to measure elapsed
+   * time from, instead of this player's own first keystroke. Only
+   * meaningful when keystroke timestamps are wall-clock too (see
+   * TypingRun's `now` prop) - omit for solo/practice. */
+  startTimestamp?: number
+}
+
+export function useTypingEngine(
+  text: string,
+  options?: UseTypingEngineOptions,
+): UseTypingEngineResult {
   const [keystrokes, setKeystrokes] = useState<Keystroke[]>([])
 
   const { typed, totalKeystrokes, mistakeCount, finished, durationMs } = replay(
     text,
     keystrokes,
+    options?.startTimestamp,
   )
 
   const status: TypingStatus = finished
