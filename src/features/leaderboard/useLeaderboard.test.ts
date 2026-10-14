@@ -31,6 +31,7 @@ describe('useLeaderboard', () => {
           avg_wpm: 80,
           best_wpm: 95,
           rank: 1,
+          is_anonymous: false,
         },
       ],
       error: null,

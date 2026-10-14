@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { displayName } from '../../lib/displayName'
 import { useLeaderboard } from './useLeaderboard'
 import './leaderboard.css'
 
@@ -43,7 +44,7 @@ export function LeaderboardPage() {
         {entries.map((entry) => (
           <tr key={entry.user_id}>
             <td>{entry.rank}</td>
-            <td>{entry.username}</td>
+            <td>{displayName(entry, entries)}</td>
             <td>{Math.round(entry.best_wpm)}</td>
             <td>{Math.round(entry.avg_wpm)}</td>
             <td>{entry.runs}</td>

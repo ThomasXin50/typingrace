@@ -53,6 +53,7 @@ describe('LeaderboardPage', () => {
           avg_wpm: 70,
           best_wpm: 90,
           rank: 1,
+          is_anonymous: false,
         },
         {
           user_id: 'b',
@@ -61,6 +62,7 @@ describe('LeaderboardPage', () => {
           avg_wpm: 50,
           best_wpm: 60,
           rank: 2,
+          is_anonymous: false,
         },
       ],
       loading: false,
@@ -72,6 +74,61 @@ describe('LeaderboardPage', () => {
     expect(screen.getByText('alice')).toBeInTheDocument()
     expect(screen.getByText('bob')).toBeInTheDocument()
     expect(screen.getByText('90')).toBeInTheDocument()
+  })
+
+  it('shows a lone anonymous entry as plain "Guest", never its generated username', () => {
+    mocks.useLeaderboard.mockReturnValue({
+      entries: [
+        {
+          user_id: 'aaaaaaaa-0000-0000-0000-00000000aaaa',
+          username: 'user_aaaaaaaa00000000000000000000aaaa',
+          runs: 3,
+          avg_wpm: 60,
+          best_wpm: 65,
+          rank: 1,
+          is_anonymous: true,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    renderWithRouter(<LeaderboardPage />)
+
+    expect(screen.getByText('Guest')).toBeInTheDocument()
+    expect(screen.queryByText(/user_aaaa/)).not.toBeInTheDocument()
+  })
+
+  it('disambiguates multiple anonymous entries with a short id-derived suffix', () => {
+    mocks.useLeaderboard.mockReturnValue({
+      entries: [
+        {
+          user_id: 'aaaaaaaa-0000-0000-0000-00000000aaaa',
+          username: 'user_a',
+          runs: 3,
+          avg_wpm: 60,
+          best_wpm: 65,
+          rank: 1,
+          is_anonymous: true,
+        },
+        {
+          user_id: 'bbbbbbbb-0000-0000-0000-00000000bbbb',
+          username: 'user_b',
+          runs: 1,
+          avg_wpm: 40,
+          best_wpm: 40,
+          rank: 2,
+          is_anonymous: true,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    renderWithRouter(<LeaderboardPage />)
+
+    expect(screen.getByText('Guest aaaa')).toBeInTheDocument()
+    expect(screen.getByText('Guest bbbb')).toBeInTheDocument()
   })
 
   it('shows an error state', () => {
