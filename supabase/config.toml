@@ -448,3 +448,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/start-race/deno.json"
 entrypoint = "./functions/start-race/index.ts"
+
+[functions.submit-round-run]
+enabled = true
+verify_jwt = false
+import_map = "./functions/submit-round-run/deno.json"
+entrypoint = "./functions/submit-round-run/index.ts"

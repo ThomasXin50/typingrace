@@ -128,3 +128,49 @@
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
+
+.race-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.race-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  max-width: 28rem;
+}
+
+.race-results__item {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9375rem;
+}
+
+.race-results__placement {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 3.5rem;
+}
+
+.race-results__name {
+  flex: 1;
+}
+
+.race-results__wpm {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
