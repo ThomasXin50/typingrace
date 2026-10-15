@@ -454,3 +454,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/submit-round-run/deno.json"
 entrypoint = "./functions/submit-round-run/index.ts"
+
+[functions.stall-round-participant]
+enabled = true
+verify_jwt = false
+import_map = "./functions/stall-round-participant/deno.json"
+entrypoint = "./functions/stall-round-participant/index.ts"
