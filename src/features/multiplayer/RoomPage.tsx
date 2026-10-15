@@ -19,6 +19,14 @@ export function RoomPage() {
   const [inRace, setInRace] = useState(false)
   const [confirmingLeave, setConfirmingLeave] = useState(false)
 
+  // Adjust state during render: if whoever else was in the room leaves
+  // (voluntarily, stalls out of the race, or gets swept for going quiet)
+  // while this host is still looking at the leave confirmation, there's
+  // no one left to warn about transferring host to - dismiss it rather
+  // than leave it showing stale text ("leaving will transfer host...")
+  // when leaving now would actually just delete the room instead.
+  if (confirmingLeave && members.length <= 1) setConfirmingLeave(false)
+
   // currentRoom is what the app-level heartbeat/unload-leave hooks (see
   // App.tsx) read to know which room to act on - this is the one place
   // that keeps it in sync with the room this page actually loaded.

@@ -385,6 +385,74 @@ describe('RoomPage', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/multiplayer')
   })
 
+  it('dismisses the leave confirmation if the room drops back to a solo host while it is showing (nothing left to warn about transferring)', async () => {
+    const baseRoom = {
+      id: 'room-1',
+      host_id: 'alice',
+      status: 'lobby' as const,
+      max_players: 8,
+      difficulty_filter: 'all' as const,
+      join_code: 'ABC123',
+    }
+
+    mocks.useRoom.mockReturnValue({
+      room: baseRoom,
+      members: [
+        {
+          user_id: 'alice',
+          status: 'active',
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'active',
+          joined_at: 't2',
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    const { rerender } = renderAt('room-1')
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /leave room/i }))
+    expect(screen.getByText(/you're the host/i)).toBeInTheDocument()
+
+    // Bob disconnects (or leaves, or stalls out) while alice is still
+    // looking at the confirmation.
+    mocks.useRoom.mockReturnValue({
+      room: baseRoom,
+      members: [
+        {
+          user_id: 'alice',
+          status: 'active',
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+    rerender(
+      <MemoryRouter initialEntries={['/multiplayer/room-1']}>
+        <Routes>
+          <Route path="/multiplayer/:roomId" element={<RoomPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText(/you're the host/i)).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /leave room/i }),
+    ).toBeInTheDocument()
+  })
+
   it('shows a Start Race button for the host, which starts the race on click', async () => {
     mocks.useRoom.mockReturnValue({
       room: {
