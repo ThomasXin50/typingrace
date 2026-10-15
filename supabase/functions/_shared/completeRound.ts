@@ -7,7 +7,10 @@ interface MinimalSupabaseAdmin {
       columns: string,
       options?: { count?: 'exact'; head?: boolean },
     ): {
-      eq(column: string, value: string): {
+      eq(
+        column: string,
+        value: string,
+      ): {
         eq(column: string, value: string): Promise<{ count: number | null }>
       }
     }

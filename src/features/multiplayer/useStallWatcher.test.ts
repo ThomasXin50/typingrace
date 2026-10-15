@@ -39,7 +39,9 @@ describe('useStallWatcher', () => {
 
   it('ping() resets the 10s window, so it never fires while pings keep arriving', () => {
     const onStall = vi.fn()
-    const { result } = renderHook(() => useStallWatcher({ active: true, onStall }))
+    const { result } = renderHook(() =>
+      useStallWatcher({ active: true, onStall }),
+    )
 
     act(() => {
       vi.advanceTimersByTime(7000)
