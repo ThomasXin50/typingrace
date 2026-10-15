@@ -2,12 +2,19 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useLeaveOnUnload } from './useLeaveOnUnload'
 
-const mocks = vi.hoisted(() => ({ getSession: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  getCurrentRoomId: vi.fn(),
+}))
 
 vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { getSession: mocks.getSession } },
   supabaseUrl: 'https://example.supabase.co',
   supabaseAnonKey: 'anon-key',
+}))
+
+vi.mock('./currentRoom', () => ({
+  getCurrentRoomId: mocks.getCurrentRoomId,
 }))
 
 describe('useLeaveOnUnload', () => {
@@ -23,8 +30,10 @@ describe('useLeaveOnUnload', () => {
     vi.unstubAllGlobals()
   })
 
-  it('sends a keepalive leave-room request on pagehide, authenticated with the current session', async () => {
-    renderHook(() => useLeaveOnUnload('room-1'))
+  it('sends a keepalive leave-room request on pagehide, for whichever room is currently active', async () => {
+    mocks.getCurrentRoomId.mockReturnValue('room-1')
+
+    renderHook(() => useLeaveOnUnload())
 
     window.dispatchEvent(new Event('pagehide'))
     await Promise.resolve()
@@ -45,28 +54,32 @@ describe('useLeaveOnUnload', () => {
     )
   })
 
-  it('does not send anything when there is no active session', async () => {
-    mocks.getSession.mockResolvedValue({ data: { session: null } })
+  it('does not send anything when no room is current', async () => {
+    mocks.getCurrentRoomId.mockReturnValue(null)
 
-    renderHook(() => useLeaveOnUnload('room-1'))
+    renderHook(() => useLeaveOnUnload())
     window.dispatchEvent(new Event('pagehide'))
-    await Promise.resolve()
     await Promise.resolve()
 
     expect(fetch).not.toHaveBeenCalled()
   })
 
-  it('does nothing while roomId is null', async () => {
-    renderHook(() => useLeaveOnUnload(null))
+  it('does not send anything when there is no active session', async () => {
+    mocks.getCurrentRoomId.mockReturnValue('room-1')
+    mocks.getSession.mockResolvedValue({ data: { session: null } })
 
+    renderHook(() => useLeaveOnUnload())
     window.dispatchEvent(new Event('pagehide'))
+    await Promise.resolve()
     await Promise.resolve()
 
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it('stops listening once unmounted', async () => {
-    const { unmount } = renderHook(() => useLeaveOnUnload('room-1'))
+    mocks.getCurrentRoomId.mockReturnValue('room-1')
+
+    const { unmount } = renderHook(() => useLeaveOnUnload())
     unmount()
 
     window.dispatchEvent(new Event('pagehide'))

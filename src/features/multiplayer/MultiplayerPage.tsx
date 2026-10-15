@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { getCurrentRoomId } from './currentRoom'
 import { useCreateRoom } from './useCreateRoom'
 import { useJoinRoom } from './useJoinRoom'
 import './multiplayer.css'
@@ -9,6 +10,19 @@ export function MultiplayerPage() {
   const createRoomState = useCreateRoom()
   const joinRoomState = useJoinRoom()
   const [joinCodeInput, setJoinCodeInput] = useState('')
+  // Read once at mount, same lazy-initializer shape useTheme uses for its
+  // own localStorage read - not on every render.
+  const [existingRoomId] = useState(getCurrentRoomId)
+
+  // A player who's already in a room (even if they navigated away from it
+  // in-app) lands back in it directly, skipping this entry form entirely -
+  // replace: true so the browser back button doesn't bounce between the
+  // two.
+  useEffect(() => {
+    if (existingRoomId) {
+      navigate(`/multiplayer/${existingRoomId}`, { replace: true })
+    }
+  }, [existingRoomId, navigate])
 
   useEffect(() => {
     if (createRoomState.room)
@@ -18,6 +32,10 @@ export function MultiplayerPage() {
   useEffect(() => {
     if (joinRoomState.room) navigate(`/multiplayer/${joinRoomState.room.id}`)
   }, [joinRoomState.room, navigate])
+
+  if (existingRoomId) {
+    return <p className="page-status">Returning to your room…</p>
+  }
 
   return (
     <div className="multiplayer-entry">

@@ -1,12 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { displayName } from '../../lib/displayName'
 import { useProfile } from '../auth/useProfile'
 import { RacePage } from './RacePage'
-import { useLeaveOnUnload } from './useLeaveOnUnload'
+import { clearCurrentRoomId, setCurrentRoomId } from './currentRoom'
 import { useLeaveRoom } from './useLeaveRoom'
 import { useRoom } from './useRoom'
-import { useRoomHeartbeat } from './useRoomHeartbeat'
 import { useStartRace } from './useStartRace'
 import './multiplayer.css'
 
@@ -18,13 +17,22 @@ export function RoomPage() {
   const leaveRoomState = useLeaveRoom()
   const startRaceState = useStartRace()
   const [inRace, setInRace] = useState(false)
+  const [confirmingLeave, setConfirmingLeave] = useState(false)
 
-  // Active through both the lobby and an embedded race (RacePage renders
-  // from within this same component's return, below - this never
-  // unmounts just because inRace flips), so "left" detection keeps
-  // working the whole time a player has the room open.
-  useRoomHeartbeat(roomId!)
-  useLeaveOnUnload(roomId!)
+  // currentRoom is what the app-level heartbeat/unload-leave hooks (see
+  // App.tsx) read to know which room to act on - this is the one place
+  // that keeps it in sync with the room this page actually loaded.
+  useEffect(() => {
+    if (room) setCurrentRoomId(room.id)
+  }, [room])
+
+  // The room is confirmed gone (not just still loading) - e.g. the sweep
+  // removed this player while they were away, or the host deleted it.
+  // Clearing here is what makes a visit to /multiplayer self-heal instead
+  // of looping back into a dead room forever.
+  useEffect(() => {
+    if (!loading && !error && !room) clearCurrentRoomId()
+  }, [loading, error, room])
 
   if (loading) {
     return <p className="page-status">Loading room…</p>
@@ -95,16 +103,54 @@ export function RoomPage() {
         </p>
       )}
 
-      <button
-        type="button"
-        className="btn"
-        disabled={leaveRoomState.leaving}
-        onClick={() =>
-          leaveRoomState.leaveRoom(room.id, () => navigate('/multiplayer'))
-        }
-      >
-        {leaveRoomState.leaving ? 'Leaving…' : 'Leave room'}
-      </button>
+      {confirmingLeave ? (
+        <div className="room-page__leave-confirm">
+          <p className="room-page__leave-confirm-text">
+            You're the host - leaving will transfer host to another player.
+            Continue?
+          </p>
+          <div className="room-page__leave-confirm-actions">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setConfirmingLeave(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn"
+              disabled={leaveRoomState.leaving}
+              onClick={() =>
+                leaveRoomState.leaveRoom(room.id, () => {
+                  clearCurrentRoomId()
+                  navigate('/multiplayer')
+                })
+              }
+            >
+              {leaveRoomState.leaving ? 'Leaving…' : 'Leave anyway'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="btn"
+          disabled={leaveRoomState.leaving}
+          onClick={() => {
+            if (isHost && members.length > 1) {
+              setConfirmingLeave(true)
+              return
+            }
+            leaveRoomState.leaveRoom(room.id, () => {
+              clearCurrentRoomId()
+              navigate('/multiplayer')
+            })
+          }}
+        >
+          {leaveRoomState.leaving ? 'Leaving…' : 'Leave room'}
+        </button>
+      )}
       {leaveRoomState.error && (
         <p className="page-status" role="alert">
           {leaveRoomState.error}

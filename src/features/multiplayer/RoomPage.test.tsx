@@ -12,8 +12,8 @@ const mocks = vi.hoisted(() => ({
   useProfile: vi.fn(),
   useStartRace: vi.fn(),
   startRace: vi.fn(),
-  useRoomHeartbeat: vi.fn(),
-  useLeaveOnUnload: vi.fn(),
+  setCurrentRoomId: vi.fn(),
+  clearCurrentRoomId: vi.fn(),
   RacePage: vi.fn(({ onDone }: { onDone: () => void }) => (
     <div>
       race page
@@ -27,11 +27,9 @@ vi.mock('./useLeaveRoom', () => ({ useLeaveRoom: mocks.useLeaveRoom }))
 vi.mock('../auth/useProfile', () => ({ useProfile: mocks.useProfile }))
 vi.mock('./useStartRace', () => ({ useStartRace: mocks.useStartRace }))
 vi.mock('./RacePage', () => ({ RacePage: mocks.RacePage }))
-vi.mock('./useRoomHeartbeat', () => ({
-  useRoomHeartbeat: mocks.useRoomHeartbeat,
-}))
-vi.mock('./useLeaveOnUnload', () => ({
-  useLeaveOnUnload: mocks.useLeaveOnUnload,
+vi.mock('./currentRoom', () => ({
+  setCurrentRoomId: mocks.setCurrentRoomId,
+  clearCurrentRoomId: mocks.clearCurrentRoomId,
 }))
 
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -70,7 +68,7 @@ describe('RoomPage', () => {
     })
   })
 
-  it('heartbeats and watches for unload for this room, through both the lobby and an embedded race', () => {
+  it('marks this room as the current one once it loads, for the app-level heartbeat/unload-leave hooks to read', () => {
     mocks.useRoom.mockReturnValue({
       room: {
         id: 'room-1',
@@ -95,8 +93,34 @@ describe('RoomPage', () => {
 
     renderAt('room-1')
 
-    expect(mocks.useRoomHeartbeat).toHaveBeenCalledWith('room-1')
-    expect(mocks.useLeaveOnUnload).toHaveBeenCalledWith('room-1')
+    expect(mocks.setCurrentRoomId).toHaveBeenCalledWith('room-1')
+  })
+
+  it('clears the current room once it is confirmed gone, so a later visit to /multiplayer does not loop back into a dead room', () => {
+    mocks.useRoom.mockReturnValue({
+      room: null,
+      members: [],
+      loading: false,
+      error: null,
+    })
+
+    renderAt('room-1')
+
+    expect(mocks.clearCurrentRoomId).toHaveBeenCalledOnce()
+    expect(mocks.setCurrentRoomId).not.toHaveBeenCalled()
+  })
+
+  it('does not clear the current room while it is still loading', () => {
+    mocks.useRoom.mockReturnValue({
+      room: null,
+      members: [],
+      loading: true,
+      error: null,
+    })
+
+    renderAt('room-1')
+
+    expect(mocks.clearCurrentRoomId).not.toHaveBeenCalled()
   })
 
   it('shows a loading state', () => {
@@ -186,7 +210,55 @@ describe('RoomPage', () => {
     expect(screen.getByText('Guest bbbb')).toBeInTheDocument()
   })
 
-  it('leaves the room and navigates back to the multiplayer entry', async () => {
+  it('leaves the room immediately (no confirmation) when the leaver is not the host', async () => {
+    mocks.useProfile.mockReturnValue({
+      profile: { id: 'bob', username: 'bob', isAnonymous: false },
+      loading: false,
+      error: null,
+    })
+    mocks.useRoom.mockReturnValue({
+      room: {
+        id: 'room-1',
+        host_id: 'alice',
+        status: 'lobby',
+        max_players: 8,
+        difficulty_filter: 'all',
+        join_code: 'ABC123',
+      },
+      members: [
+        {
+          user_id: 'alice',
+          status: 'active',
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'active',
+          joined_at: 't2',
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    renderAt('room-1')
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /leave room/i }))
+
+    expect(mocks.leaveRoom).toHaveBeenCalledWith('room-1', expect.any(Function))
+
+    const onLeft = mocks.leaveRoom.mock.calls[0][1]
+    onLeft()
+    expect(mocks.clearCurrentRoomId).toHaveBeenCalledOnce()
+    expect(mocks.navigate).toHaveBeenCalledWith('/multiplayer')
+  })
+
+  it('leaves the room immediately (no confirmation) when the host is the only member', async () => {
     mocks.useRoom.mockReturnValue({
       room: {
         id: 'room-1',
@@ -218,6 +290,98 @@ describe('RoomPage', () => {
 
     const onLeft = mocks.leaveRoom.mock.calls[0][1]
     onLeft()
+    expect(mocks.clearCurrentRoomId).toHaveBeenCalledOnce()
+    expect(mocks.navigate).toHaveBeenCalledWith('/multiplayer')
+  })
+
+  it('warns the host before leaving a room with other players present', async () => {
+    mocks.useRoom.mockReturnValue({
+      room: {
+        id: 'room-1',
+        host_id: 'alice',
+        status: 'lobby',
+        max_players: 8,
+        difficulty_filter: 'all',
+        join_code: 'ABC123',
+      },
+      members: [
+        {
+          user_id: 'alice',
+          status: 'active',
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'active',
+          joined_at: 't2',
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    renderAt('room-1')
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /leave room/i }))
+
+    expect(mocks.leaveRoom).not.toHaveBeenCalled()
+    expect(screen.getByText(/you're the host/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+    expect(mocks.leaveRoom).not.toHaveBeenCalled()
+    expect(screen.queryByText(/you're the host/i)).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /leave room/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('actually leaves once the host confirms "Leave anyway"', async () => {
+    mocks.useRoom.mockReturnValue({
+      room: {
+        id: 'room-1',
+        host_id: 'alice',
+        status: 'lobby',
+        max_players: 8,
+        difficulty_filter: 'all',
+        join_code: 'ABC123',
+      },
+      members: [
+        {
+          user_id: 'alice',
+          status: 'active',
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'active',
+          joined_at: 't2',
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    renderAt('room-1')
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole('button', { name: /leave room/i }))
+    await user.click(screen.getByRole('button', { name: /leave anyway/i }))
+
+    expect(mocks.leaveRoom).toHaveBeenCalledWith('room-1', expect.any(Function))
+
+    const onLeft = mocks.leaveRoom.mock.calls[0][1]
+    onLeft()
+    expect(mocks.clearCurrentRoomId).toHaveBeenCalledOnce()
     expect(mocks.navigate).toHaveBeenCalledWith('/multiplayer')
   })
 
