@@ -1,5 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'
+import { completeRoundIfDone } from '../_shared/completeRound.ts'
 import {
   assessValidation,
   computeStats,
@@ -140,29 +141,7 @@ export default {
 
     const { placement, field_size: fieldSize } = result[0]
 
-    // Best-effort round completion check: once nobody enrolled is still
-    // racing, close the round out and free the room for a next race. Not
-    // atomic with the update above - a harmless no-op if it ever runs
-    // twice. No stalled-participant detection exists yet, so a round where
-    // someone abandons without finishing currently never completes (same
-    // limitation already noted when start-race shipped).
-    const { count: stillRacing } = await ctx.supabaseAdmin
-      .from('round_participants')
-      .select('user_id', { count: 'exact', head: true })
-      .eq('round_id', roundId)
-      .eq('status', 'racing')
-
-    if (stillRacing === 0) {
-      await ctx.supabaseAdmin
-        .from('rounds')
-        .update({ status: 'finished', ended_at: new Date().toISOString() })
-        .eq('id', roundId)
-
-      await ctx.supabaseAdmin
-        .from('rooms')
-        .update({ status: 'lobby' })
-        .eq('id', round.room_id)
-    }
+    await completeRoundIfDone(ctx.supabaseAdmin, roundId, round.room_id)
 
     return Response.json({
       status,

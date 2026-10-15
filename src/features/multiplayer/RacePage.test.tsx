@@ -11,8 +11,12 @@ const mocks = vi.hoisted(() => ({
   useSubmitRoundRun: vi.fn(),
   useRaceProgress: vi.fn(),
   useProfile: vi.fn(),
+  useStallWatcher: vi.fn(),
+  useStallRoundParticipant: vi.fn(),
   submit: vi.fn(),
   sendProgress: vi.fn(),
+  ping: vi.fn(),
+  stall: vi.fn(),
 }))
 
 vi.mock('./useActiveRound', () => ({ useActiveRound: mocks.useActiveRound }))
@@ -26,6 +30,10 @@ vi.mock('./useRaceProgress', () => ({
   useRaceProgress: mocks.useRaceProgress,
 }))
 vi.mock('../auth/useProfile', () => ({ useProfile: mocks.useProfile }))
+vi.mock('./useStallWatcher', () => ({ useStallWatcher: mocks.useStallWatcher }))
+vi.mock('./useStallRoundParticipant', () => ({
+  useStallRoundParticipant: mocks.useStallRoundParticipant,
+}))
 
 describe('RacePage', () => {
   afterEach(() => {
@@ -53,6 +61,12 @@ describe('RacePage', () => {
       profile: { id: 'me', username: 'me', isAnonymous: false },
       loading: false,
       error: null,
+    })
+    mocks.useStallWatcher.mockReturnValue(mocks.ping)
+    mocks.useStallRoundParticipant.mockReturnValue({
+      stalling: false,
+      error: null,
+      stall: mocks.stall,
     })
   })
 
@@ -475,6 +489,114 @@ describe('RacePage', () => {
     }
 
     expect(onDone).toHaveBeenCalledOnce()
+  })
+
+  it('swaps the typing interface for a spectate message and reports the stall, once the idle watcher fires', () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'the quick brown fox',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+
+    render(<RacePage roomId="room-1" />)
+
+    expect(screen.getByLabelText('Typing input')).toBeInTheDocument()
+
+    const { onStall } = mocks.useStallWatcher.mock.calls.at(-1)![0]
+    act(() => {
+      onStall()
+    })
+
+    expect(screen.queryByLabelText('Typing input')).not.toBeInTheDocument()
+    expect(screen.getByText(/stalled out/i)).toBeInTheDocument()
+    expect(mocks.stall).toHaveBeenCalledWith('round-1')
+  })
+
+  it('stops watching for a stall once this player has already finished', () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'the quick brown fox',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+    mocks.useSubmitRoundRun.mockReturnValue({
+      submitting: false,
+      result: { status: 'verified', placement: 1, fieldSize: 2 },
+      error: null,
+      submit: mocks.submit,
+    })
+
+    render(<RacePage roomId="room-1" />)
+
+    const { active } = mocks.useStallWatcher.mock.calls.at(-1)![0]
+    expect(active).toBe(false)
+  })
+
+  it("marks a stalled participant's track with a text indicator, not color alone", () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'the quick brown fox',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+    mocks.useRoundResults.mockReturnValue({
+      results: [
+        {
+          user_id: 'alice',
+          status: 'stalled',
+          validation_status: null,
+          wpm: null,
+          placement: null,
+          field_size: 2,
+          username: 'alice',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'racing',
+          validation_status: null,
+          wpm: null,
+          placement: null,
+          field_size: 2,
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    render(<RacePage roomId="room-1" />)
+
+    expect(screen.getByText(/alice.*\(stalled\)/i)).toBeInTheDocument()
   })
 
   it('shows an error when the round fails to load', () => {

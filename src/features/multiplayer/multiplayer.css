@@ -210,6 +210,21 @@
   opacity: 0;
 }
 
+.race-track--stalled .race-track__name {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.race-track__dot--stalled {
+  background: var(--text-muted);
+  box-shadow: none;
+}
+
+.race-track__dot--stalled::before {
+  animation: none;
+  opacity: 0;
+}
+
 @keyframes race-track-pulse {
   0%,
   100% {

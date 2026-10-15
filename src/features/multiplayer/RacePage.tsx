@@ -7,6 +7,8 @@ import { useActiveRound, type RoundRow } from './useActiveRound'
 import { useCountdown } from './useCountdown'
 import { useRaceProgress } from './useRaceProgress'
 import { useRoundResults } from './useRoundResults'
+import { useStallRoundParticipant } from './useStallRoundParticipant'
+import { useStallWatcher } from './useStallWatcher'
 import { useSubmitRoundRun } from './useSubmitRoundRun'
 import { useText } from './useText'
 import './multiplayer.css'
@@ -76,6 +78,22 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
   const [roundClosed, setRoundClosed] = useState(false)
   if (effectiveRound && !round && !roundClosed) setRoundClosed(true)
 
+  const [isStalled, setIsStalled] = useState(false)
+  const stallRoundParticipant = useStallRoundParticipant()
+  // Armed the instant the race actually starts (not waiting for a first
+  // keystroke that might never come), disarmed once this player has
+  // genuinely finished or the round has already closed - either way,
+  // there's nothing left to watch for.
+  const stallWatcherActive =
+    countdown.hasStarted && !roundClosed && !submitRoundRun.result && !isStalled
+  const ping = useStallWatcher({
+    active: stallWatcherActive,
+    onStall: () => {
+      setIsStalled(true)
+      stallRoundParticipant.stall(effectiveRound!.id)
+    },
+  })
+
   const [lobbyCountdown, setLobbyCountdown] = useState(BACK_TO_LOBBY_SECONDS)
 
   useEffect(() => {
@@ -120,15 +138,26 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
     submitRoundRun.submit(effectiveRound!.id, keystrokes)
   }
 
+  function handleProgress(progressPct: number) {
+    sendProgress(progressPct)
+    ping()
+  }
+
   return (
     <div className="race-page">
-      <TypingRun
-        content={effectiveContent}
-        now={() => Date.now()}
-        startTimestamp={Date.parse(effectiveRound.started_at)}
-        onFinish={handleFinish}
-        onProgress={sendProgress}
-      />
+      {isStalled ? (
+        <p className="page-status">
+          You stalled out — spectating the rest of this round…
+        </p>
+      ) : (
+        <TypingRun
+          content={effectiveContent}
+          now={() => Date.now()}
+          startTimestamp={Date.parse(effectiveRound.started_at)}
+          onFinish={handleFinish}
+          onProgress={handleProgress}
+        />
+      )}
 
       {results.length > 0 && (
         <ul className="race-tracks">
@@ -136,10 +165,17 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
             const pct = r.status === 'finished' ? 1 : (progress[r.user_id] ?? 0)
             const isSelf = r.user_id === profile?.id
             const hasResult = r.placement !== null && r.wpm !== null
+            const isRowStalled = r.status === 'stalled'
             return (
-              <li key={r.user_id} className="race-track">
+              <li
+                key={r.user_id}
+                className={
+                  isRowStalled ? 'race-track race-track--stalled' : 'race-track'
+                }
+              >
                 <span className="race-track__name">
                   {isSelf ? 'You' : displayName(r, results)}
+                  {isRowStalled ? ' (stalled)' : ''}
                 </span>
                 <div className="race-track__line">
                   <span
@@ -150,7 +186,9 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
                     className={
                       r.status === 'finished'
                         ? 'race-track__dot race-track__dot--finished'
-                        : 'race-track__dot'
+                        : isRowStalled
+                          ? 'race-track__dot race-track__dot--stalled'
+                          : 'race-track__dot'
                     }
                     data-testid="race-track-dot"
                     data-user-id={r.user_id}
