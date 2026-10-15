@@ -10,10 +10,14 @@ const mocks = vi.hoisted(() => ({
   useCreateRoom: vi.fn(),
   useJoinRoom: vi.fn(),
   navigate: vi.fn(),
+  getCurrentRoomId: vi.fn(),
 }))
 
 vi.mock('./useCreateRoom', () => ({ useCreateRoom: mocks.useCreateRoom }))
 vi.mock('./useJoinRoom', () => ({ useJoinRoom: mocks.useJoinRoom }))
+vi.mock('./currentRoom', () => ({
+  getCurrentRoomId: mocks.getCurrentRoomId,
+}))
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>()
@@ -43,6 +47,20 @@ describe('MultiplayerPage', () => {
       error: null,
       joinRoom: mocks.joinRoom,
     })
+    mocks.getCurrentRoomId.mockReturnValue(null)
+  })
+
+  it('redirects straight back into an existing room instead of showing the entry form', () => {
+    mocks.getCurrentRoomId.mockReturnValue('room-9')
+
+    renderPage()
+
+    expect(mocks.navigate).toHaveBeenCalledWith('/multiplayer/room-9', {
+      replace: true,
+    })
+    expect(
+      screen.queryByRole('button', { name: /create a room/i }),
+    ).not.toBeInTheDocument()
   })
 
   it('creates a room on click', async () => {

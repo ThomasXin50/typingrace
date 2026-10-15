@@ -4,10 +4,20 @@ import App from './App'
 
 const mocks = vi.hoisted(() => ({
   useProfile: vi.fn(),
+  useRoomHeartbeat: vi.fn(),
+  useLeaveOnUnload: vi.fn(),
 }))
 
 vi.mock('./features/auth/useProfile', () => ({
   useProfile: mocks.useProfile,
+}))
+
+vi.mock('./features/multiplayer/useRoomHeartbeat', () => ({
+  useRoomHeartbeat: mocks.useRoomHeartbeat,
+}))
+
+vi.mock('./features/multiplayer/useLeaveOnUnload', () => ({
+  useLeaveOnUnload: mocks.useLeaveOnUnload,
 }))
 
 vi.mock('./features/home/useHomeStats', () => ({
@@ -80,6 +90,19 @@ describe('App', () => {
     expect(
       screen.getByText(/fastest verified runs across every typist/i),
     ).toBeInTheDocument()
+  })
+
+  it('mounts room heartbeat and leave-on-unload once, for the whole app lifetime', () => {
+    mocks.useProfile.mockReturnValue({
+      profile: { id: 'user-1', username: 'alice' },
+      loading: false,
+      error: null,
+    })
+
+    render(<App />)
+
+    expect(mocks.useRoomHeartbeat).toHaveBeenCalledOnce()
+    expect(mocks.useLeaveOnUnload).toHaveBeenCalledOnce()
   })
 
   it('renders the matching page for the current route', () => {
