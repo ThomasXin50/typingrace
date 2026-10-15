@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { displayName } from '../../lib/displayName'
 import { useProfile } from '../auth/useProfile'
 import { RacePage } from './RacePage'
+import { useLeaveOnUnload } from './useLeaveOnUnload'
 import { useLeaveRoom } from './useLeaveRoom'
 import { useRoom } from './useRoom'
+import { useRoomHeartbeat } from './useRoomHeartbeat'
 import { useStartRace } from './useStartRace'
 import './multiplayer.css'
 
@@ -16,6 +18,13 @@ export function RoomPage() {
   const leaveRoomState = useLeaveRoom()
   const startRaceState = useStartRace()
   const [inRace, setInRace] = useState(false)
+
+  // Active through both the lobby and an embedded race (RacePage renders
+  // from within this same component's return, below - this never
+  // unmounts just because inRace flips), so "left" detection keeps
+  // working the whole time a player has the room open.
+  useRoomHeartbeat(roomId!)
+  useLeaveOnUnload(roomId!)
 
   if (loading) {
     return <p className="page-status">Loading room…</p>

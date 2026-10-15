@@ -460,3 +460,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/stall-round-participant/deno.json"
 entrypoint = "./functions/stall-round-participant/index.ts"
+
+[functions.heartbeat-room-member]
+enabled = true
+verify_jwt = false
+import_map = "./functions/heartbeat-room-member/deno.json"
+entrypoint = "./functions/heartbeat-room-member/index.ts"

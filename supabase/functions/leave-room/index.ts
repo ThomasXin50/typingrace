@@ -1,5 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'
+import { completeRoundIfDone } from '../_shared/completeRound.ts'
 import { planLeave } from './leaveRoom.ts'
 
 interface LeaveRoomBody {
@@ -59,6 +60,28 @@ export default {
         { error: deleteMemberError.message },
         { status: 500 },
       )
+    }
+
+    // Also drop this player's participation in the room's currently active
+    // round, if any - otherwise leaving mid-race leaves that round stuck
+    // waiting on a "racing" row that will never submit a result (the same
+    // class of bug stalled-detection fixed, but via a voluntary leave
+    // instead of an idle timeout).
+    const { data: activeRound } = await ctx.supabaseAdmin
+      .from('rounds')
+      .select('id')
+      .eq('room_id', roomId)
+      .eq('status', 'active')
+      .maybeSingle()
+
+    if (activeRound) {
+      await ctx.supabaseAdmin
+        .from('round_participants')
+        .delete()
+        .eq('round_id', activeRound.id)
+        .eq('user_id', userId)
+
+      await completeRoundIfDone(ctx.supabaseAdmin, activeRound.id, roomId)
     }
 
     const { data: remainingMembers, error: remainingError } =

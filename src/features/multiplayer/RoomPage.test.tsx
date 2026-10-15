@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   useProfile: vi.fn(),
   useStartRace: vi.fn(),
   startRace: vi.fn(),
+  useRoomHeartbeat: vi.fn(),
+  useLeaveOnUnload: vi.fn(),
   RacePage: vi.fn(({ onDone }: { onDone: () => void }) => (
     <div>
       race page
@@ -25,6 +27,12 @@ vi.mock('./useLeaveRoom', () => ({ useLeaveRoom: mocks.useLeaveRoom }))
 vi.mock('../auth/useProfile', () => ({ useProfile: mocks.useProfile }))
 vi.mock('./useStartRace', () => ({ useStartRace: mocks.useStartRace }))
 vi.mock('./RacePage', () => ({ RacePage: mocks.RacePage }))
+vi.mock('./useRoomHeartbeat', () => ({
+  useRoomHeartbeat: mocks.useRoomHeartbeat,
+}))
+vi.mock('./useLeaveOnUnload', () => ({
+  useLeaveOnUnload: mocks.useLeaveOnUnload,
+}))
 
 vi.mock('react-router-dom', async (importOriginal) => {
   const actual = await importOriginal<typeof import('react-router-dom')>()
@@ -60,6 +68,35 @@ describe('RoomPage', () => {
       error: null,
       startRace: mocks.startRace,
     })
+  })
+
+  it('heartbeats and watches for unload for this room, through both the lobby and an embedded race', () => {
+    mocks.useRoom.mockReturnValue({
+      room: {
+        id: 'room-1',
+        host_id: 'alice',
+        status: 'lobby',
+        max_players: 8,
+        difficulty_filter: 'all',
+        join_code: 'ABC123',
+      },
+      members: [
+        {
+          user_id: 'alice',
+          status: 'active',
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    renderAt('room-1')
+
+    expect(mocks.useRoomHeartbeat).toHaveBeenCalledWith('room-1')
+    expect(mocks.useLeaveOnUnload).toHaveBeenCalledWith('room-1')
   })
 
   it('shows a loading state', () => {
