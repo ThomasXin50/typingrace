@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { NavBar } from './app/NavBar'
+import { deriveBasename } from './app/routerBasename'
 import { useProfile } from './features/auth/useProfile'
 import { HomePage } from './features/home/HomePage'
 import { LeaderboardPage } from './features/leaderboard/LeaderboardPage'
@@ -24,7 +25,7 @@ function App() {
   useLeaveOnUnload()
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={deriveBasename(import.meta.env.BASE_URL)}>
       <main className="app">
         <NavBar
           username={profile?.username}
