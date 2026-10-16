@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useAutoScrollText } from './useAutoScrollText'
 import {
   useTypingEngine,
   type Keystroke,
@@ -55,6 +56,8 @@ export function TypingRun({
   startTimestamp,
 }: TypingRunProps) {
   const engine = useTypingEngine(content, { startTimestamp })
+  const { viewportRef, textRef, clipped, heightPx, offsetPx } =
+    useAutoScrollText(engine.typed.length)
   const inputRef = useRef<HTMLInputElement>(null)
   const internalTabHeldRef = useRef(false)
   const tabHeldRef = externalTabHeldRef ?? internalTabHeldRef
@@ -159,15 +162,31 @@ export function TypingRun({
         }
         onClick={() => inputRef.current?.focus()}
       >
-        <div className="typing-text">
-          {content.split('').map((char, i) => (
-            <span
-              key={i}
-              className={`typing-char typing-char--${engine.charStatuses[i]}`}
-            >
-              {char}
-            </span>
-          ))}
+        <div
+          ref={viewportRef}
+          className={
+            clipped
+              ? 'typing-text-viewport typing-text-viewport--clipped'
+              : 'typing-text-viewport'
+          }
+          style={clipped ? { height: heightPx } : undefined}
+        >
+          <div
+            ref={textRef}
+            className="typing-text"
+            style={
+              clipped ? { transform: `translateY(-${offsetPx}px)` } : undefined
+            }
+          >
+            {content.split('').map((char, i) => (
+              <span
+                key={i}
+                className={`typing-char typing-char--${engine.charStatuses[i]}`}
+              >
+                {char}
+              </span>
+            ))}
+          </div>
         </div>
         {showOverlay && (
           <button
