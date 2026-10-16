@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { HeroKeyboard } from './HeroKeyboard'
 import { useHomeStats } from './useHomeStats'
 import './home.css'
 
@@ -23,7 +24,7 @@ const destinations = [
   {
     to: '/multiplayer',
     title: 'Multiplayer',
-    description: 'Race friends live in a private room. Coming soon.',
+    description: 'Race friends live in a private room.',
   },
 ]
 
@@ -32,6 +33,8 @@ export function HomePage() {
 
   return (
     <>
+      <HeroKeyboard />
+
       {stats && (
         <div className="stat-row">
           <div className="stat-tile stat-tile--primary">

@@ -11,6 +11,13 @@ vi.mock('./useHomeStats', () => ({
   useHomeStats: mocks.useHomeStats,
 }))
 
+// A 3D CSS animation loop with no information of its own (aria-hidden) -
+// out of scope for these page-logic tests, and its own HeroKeyboard.test.tsx
+// covers its behavior directly.
+vi.mock('./HeroKeyboard', () => ({
+  HeroKeyboard: () => null,
+}))
+
 function renderHome() {
   return render(
     <MemoryRouter>
@@ -48,12 +55,6 @@ describe('HomePage', () => {
       'href',
       '/multiplayer',
     )
-  })
-
-  it('marks multiplayer as not yet available', () => {
-    renderHome()
-
-    expect(screen.getByText(/coming soon/i)).toBeInTheDocument()
   })
 
   it('shows an empty state when the user has no runs yet', () => {
