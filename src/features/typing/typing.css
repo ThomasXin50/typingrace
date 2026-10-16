@@ -47,6 +47,20 @@
   opacity: 0.6;
 }
 
+.typing-text-viewport--clipped {
+  overflow: hidden;
+}
+
+.typing-text-viewport--clipped .typing-text {
+  transition: transform 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-text-viewport--clipped .typing-text {
+    transition: none;
+  }
+}
+
 .typing-text-wrap--blurred .typing-char--current {
   animation-play-state: paused;
 }
