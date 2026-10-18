@@ -115,7 +115,9 @@ export function RoomPage() {
     <div className="room-page">
       <div className="room-page__header">
         <h2>Room code</h2>
-        <span className="room-page__join-code">{room.join_code}</span>
+        <span className="room-page__join-code panel-enter">
+          {room.join_code}
+        </span>
         <p className="room-page__hint">
           Share this code with people you want to race.
         </p>

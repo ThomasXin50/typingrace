@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { displayName } from '../../lib/displayName'
 import { useProfile } from '../auth/useProfile'
 import { TypingRun } from '../typing/TypingRun'
@@ -31,6 +31,7 @@ interface RacePageProps {
 const PENDING_ROUND_PLACEHOLDER = '2099-01-01T00:00:00.000Z'
 
 const BACK_TO_LOBBY_SECONDS = 8
+const STALL_FLASH_MS = 900
 
 export function RacePage({ roomId, onDone }: RacePageProps) {
   const {
@@ -93,6 +94,41 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
       stallRoundParticipant.stall(effectiveRound!.id)
     },
   })
+
+  // Calls out whoever's row just flipped to stalled - a real-time event
+  // otherwise easy to miss if you're not already looking at that exact
+  // row. Tracks the previously-seen stalled ids so only a genuine
+  // transition flashes, not every render while someone's already stalled -
+  // null (rather than an empty set) specifically marks "haven't observed a
+  // baseline yet", so joining/refreshing into a race where someone is
+  // already stalled doesn't flash them either; there's nothing to compare
+  // against on that very first render.
+  const previousStalledIdsRef = useRef<Set<string> | null>(null)
+  const [justStalledIds, setJustStalledIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    const currentStalledIds = new Set(
+      results.filter((r) => r.status === 'stalled').map((r) => r.user_id),
+    )
+    const baseline = previousStalledIdsRef.current
+    const newlyStalled =
+      baseline === null
+        ? []
+        : [...currentStalledIds].filter((id) => !baseline.has(id))
+    previousStalledIdsRef.current = currentStalledIds
+
+    if (newlyStalled.length === 0) return
+
+    setJustStalledIds((prev) => new Set([...prev, ...newlyStalled]))
+    const timeout = setTimeout(() => {
+      setJustStalledIds((prev) => {
+        const next = new Set(prev)
+        for (const id of newlyStalled) next.delete(id)
+        return next
+      })
+    }, STALL_FLASH_MS)
+    return () => clearTimeout(timeout)
+  }, [results])
 
   const [lobbyCountdown, setLobbyCountdown] = useState(BACK_TO_LOBBY_SECONDS)
 
@@ -174,9 +210,13 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
             return (
               <li
                 key={r.user_id}
-                className={
-                  isRowStalled ? 'race-track race-track--stalled' : 'race-track'
-                }
+                className={[
+                  'race-track',
+                  isRowStalled && 'race-track--stalled',
+                  justStalledIds.has(r.user_id) && 'attention-flash',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 <span className="race-track__name">
                   {isSelf ? 'You' : displayName(r, results)}
