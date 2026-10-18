@@ -1,9 +1,19 @@
 import { useState } from 'react'
 import { useTheme, type ThemePreference } from '../../app/useTheme'
+import { formatElapsed } from '../../lib/formatElapsed'
 import { useProfile } from '../auth/useProfile'
+import { RunsTrendChart } from './RunsTrendChart'
 import { useProfileStats } from './useProfileStats'
+import { useRecentRuns } from './useRecentRuns'
 import { useUpdateUsername } from './useUpdateUsername'
 import './profile.css'
+
+function formatRunDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
   { value: 'system', label: 'System' },
@@ -14,6 +24,11 @@ const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
 export function ProfilePage() {
   const { profile, loading, error } = useProfile()
   const { stats, loading: statsLoading, error: statsError } = useProfileStats()
+  const {
+    runs: recentRuns,
+    loading: recentRunsLoading,
+    error: recentRunsError,
+  } = useRecentRuns()
   const { preference, setPreference } = useTheme()
   const updateUsername = useUpdateUsername()
   const [usernameInput, setUsernameInput] = useState('')
@@ -82,6 +97,56 @@ export function ProfilePage() {
               <span className="stat-tile__label">runs</span>
             </div>
           </div>
+        )}
+      </section>
+
+      <section>
+        <h2>Recent runs</h2>
+
+        {recentRunsLoading && <p className="page-status">Loading runs…</p>}
+        {recentRunsError && (
+          <p className="page-status" role="alert">
+            {recentRunsError}
+          </p>
+        )}
+        {!recentRunsLoading && !recentRunsError && recentRuns.length === 0 && (
+          <p className="stat-row-empty">
+            No runs yet — head to Solo to start building your history.
+          </p>
+        )}
+        {recentRuns.length > 0 && (
+          <>
+            <RunsTrendChart runs={recentRuns} />
+            <table className="profile-runs-table">
+              <thead>
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Wpm</th>
+                  <th scope="col">Accuracy</th>
+                  <th scope="col">Errors</th>
+                  <th scope="col">Duration</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentRuns.map((run) => (
+                  <tr key={run.id}>
+                    <td>{formatRunDate(run.createdAt)}</td>
+                    <td>
+                      {Math.round(run.wpm)}
+                      {run.validationStatus !== 'verified' && (
+                        <span className="profile-runs-table__status">
+                          {run.validationStatus}
+                        </span>
+                      )}
+                    </td>
+                    <td>{Math.round(run.accuracy)}%</td>
+                    <td>{run.errorCount}</td>
+                    <td>{formatElapsed(run.durationMs)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </section>
 

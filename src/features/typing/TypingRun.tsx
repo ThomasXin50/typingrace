@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { formatElapsed } from '../../lib/formatElapsed'
 import { useAutoScrollText } from './useAutoScrollText'
 import { useCountUp } from './useCountUp'
 import {
@@ -11,13 +12,6 @@ import { computeWpmSeries } from './wpmSeries'
 import './typing.css'
 
 const RACE_CLOCK_TICK_MS = 200
-
-function formatElapsed(ms: number): string {
-  const totalSeconds = Math.floor(Math.max(0, ms) / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
-}
 
 interface TypingRunProps {
   content: string
