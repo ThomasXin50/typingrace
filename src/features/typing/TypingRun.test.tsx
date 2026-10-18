@@ -26,7 +26,9 @@ describe('TypingRun', () => {
     await user.type(screen.getByLabelText('Typing input'), 'abc')
 
     expect(screen.getByText('wpm')).toBeInTheDocument()
-    expect(screen.getByText('100%')).toBeInTheDocument()
+    // Accuracy counts up to its final value over 500ms rather than
+    // appearing instantly - findByText polls until it lands.
+    expect(await screen.findByText('100%')).toBeInTheDocument()
   })
 
   it('calls onProgress with the current progress fraction on every keystroke, correct or not', async () => {
