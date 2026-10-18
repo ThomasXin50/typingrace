@@ -118,6 +118,31 @@ a {
   margin: 0 0 2.5rem;
 }
 
+/* Shared fade/rise entrance for a panel that pops into existence on a
+   conditional render - a stat row once data loads, a confirmation panel
+   once it's triggered. Generalizes the same pattern typing.css already
+   uses for the post-run results panel. */
+.panel-enter {
+  animation: panel-enter 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-enter {
+    animation: none;
+  }
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .btn {
   background: none;
   border: 1px solid var(--border);
@@ -126,6 +151,9 @@ a {
   padding: 0.5rem 1rem;
   font-size: 0.9375rem;
   cursor: pointer;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
 }
 
 .btn:hover {

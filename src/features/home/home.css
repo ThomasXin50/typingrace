@@ -24,6 +24,7 @@
   font-size: 1.125rem;
   font-weight: 600;
   color: var(--text);
+  transition: color 150ms ease;
 }
 
 .home-list__description {

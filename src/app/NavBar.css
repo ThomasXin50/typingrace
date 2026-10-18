@@ -24,6 +24,7 @@
   font-size: 0.9375rem;
   color: var(--text-muted);
   text-decoration: none;
+  transition: color 150ms ease;
 }
 
 .nav-bar__link:hover {
@@ -40,6 +41,7 @@
   color: var(--text-muted);
   font-family: var(--font-mono);
   text-decoration: none;
+  transition: color 150ms ease;
 }
 
 .nav-bar__user:hover,
