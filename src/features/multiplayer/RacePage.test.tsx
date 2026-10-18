@@ -599,6 +599,107 @@ describe('RacePage', () => {
     expect(screen.getByText(/alice.*\(stalled\)/i)).toBeInTheDocument()
   })
 
+  it('does not flash a participant who is already stalled on first mount - there is nothing to compare against yet', () => {
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'the quick brown fox',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+    mocks.useRoundResults.mockReturnValue({
+      results: [
+        {
+          user_id: 'alice',
+          status: 'stalled',
+          validation_status: null,
+          wpm: null,
+          placement: null,
+          field_size: 1,
+          username: 'alice',
+          is_anonymous: false,
+        },
+      ],
+      loading: false,
+      error: null,
+    })
+
+    render(<RacePage roomId="room-1" />)
+
+    expect(screen.getByText(/alice/i).closest('li')?.className).not.toContain(
+      'attention-flash',
+    )
+  })
+
+  it("flashes a participant's row the moment they transition to stalled, then clears after the flash duration", () => {
+    vi.useFakeTimers()
+
+    mocks.useActiveRound.mockReturnValue({
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    })
+    mocks.useText.mockReturnValue({
+      content: 'the quick brown fox',
+      loading: false,
+      error: null,
+    })
+    mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+
+    const racingAlice = {
+      user_id: 'alice',
+      status: 'racing' as const,
+      validation_status: null,
+      wpm: null,
+      placement: null,
+      field_size: 1,
+      username: 'alice',
+      is_anonymous: false,
+    }
+
+    mocks.useRoundResults.mockReturnValue({
+      results: [racingAlice],
+      loading: false,
+      error: null,
+    })
+
+    const { rerender } = render(<RacePage roomId="room-1" />)
+    expect(screen.getByText(/alice/i).closest('li')?.className).not.toContain(
+      'attention-flash',
+    )
+
+    mocks.useRoundResults.mockReturnValue({
+      results: [{ ...racingAlice, status: 'stalled' as const }],
+      loading: false,
+      error: null,
+    })
+    rerender(<RacePage roomId="room-1" />)
+
+    expect(screen.getByText(/alice/i).closest('li')?.className).toContain(
+      'attention-flash',
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(900)
+    })
+
+    expect(screen.getByText(/alice/i).closest('li')?.className).not.toContain(
+      'attention-flash',
+    )
+  })
+
   it('shows an error when the round fails to load', () => {
     mocks.useActiveRound.mockReturnValue({
       round: null,
