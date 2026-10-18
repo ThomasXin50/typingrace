@@ -61,6 +61,28 @@ body {
   margin: 0;
 }
 
+/* Softens the theme toggle - every color/background/border token swaps at
+   once otherwise, a hard cut across the whole page. Scoped to exactly the
+   three non-layout-triggering properties driven by the color tokens above
+   (no width/height/position - see the layout-property warning in the
+   motion guidance this app follows), so it's cheap to run broadly. A more
+   specific selector elsewhere (e.g. .btn's own hover transition) still
+   wins via normal cascade specificity, so this doesn't fight those. */
+body,
+body * {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  body * {
+    transition: none;
+  }
+}
+
 button {
   font-family: inherit;
 }

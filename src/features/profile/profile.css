@@ -57,6 +57,13 @@
   margin: 0.5rem 0 0;
 }
 
+.profile-field__status--success {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--correct);
+}
+
 .profile-theme-options {
   display: flex;
   gap: 1.5rem;

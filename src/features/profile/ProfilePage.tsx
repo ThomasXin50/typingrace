@@ -109,7 +109,24 @@ export function ProfilePage() {
             </button>
           </div>
           {updateUsername.success && (
-            <p className="profile-field__status">Saved.</p>
+            <p className="profile-field__status profile-field__status--success panel-enter">
+              <svg
+                aria-hidden="true"
+                width="14"
+                height="14"
+                viewBox="0 0 16 16"
+                fill="none"
+              >
+                <path
+                  d="M3 8.5l3 3 7-7"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              Saved.
+            </p>
           )}
           {updateUsername.error && (
             <p className="profile-field__status" role="alert">
