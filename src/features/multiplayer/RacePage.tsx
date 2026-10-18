@@ -124,11 +124,16 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
   }
 
   if (!countdown.hasStarted) {
+    const secondsLeft = Math.ceil(countdown.msRemaining / 1000)
     return (
       <div className="race-countdown">
         <p className="race-countdown__label">Starting in</p>
-        <span className="race-countdown__number">
-          {Math.ceil(countdown.msRemaining / 1000)}
+        {/* Keyed by the displayed digit (not the raw tick, which fires
+            every 200ms) so the pulse animation replays fresh exactly once
+            per second, via a plain remount rather than a JS-driven
+            restart. */}
+        <span key={secondsLeft} className="race-countdown__number">
+          {secondsLeft}
         </span>
       </div>
     )
