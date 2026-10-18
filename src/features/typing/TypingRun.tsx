@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAutoScrollText } from './useAutoScrollText'
+import { useCountUp } from './useCountUp'
 import {
   useTypingEngine,
   type Keystroke,
@@ -102,6 +103,16 @@ export function TypingRun({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine.keystrokes])
 
+  // Always called, never conditionally (rules of hooks) - each stays at 0
+  // until engine.stats actually exists, then counts up to it once. The one
+  // genuine "reward beat" a finished run gets, so the final numbers feel
+  // earned rather than just materializing.
+  const COUNT_UP_MS = 500
+  const wpmCount = useCountUp(engine.stats?.wpm ?? 0, COUNT_UP_MS)
+  const accuracyCount = useCountUp(engine.stats?.accuracy ?? 0, COUNT_UP_MS)
+  const rawWpmCount = useCountUp(engine.stats?.rawWpm ?? 0, COUNT_UP_MS)
+  const errorCount = useCountUp(engine.stats?.errorCount ?? 0, COUNT_UP_MS)
+
   const wpmSeries = useMemo(
     () =>
       engine.status === 'finished'
@@ -142,13 +153,13 @@ export function TypingRun({
         {startTimestamp !== undefined
           ? engine.status !== 'finished' &&
             !showOverlay && (
-              <p className="typing-status typing-status--hint typing-status--clock">
+              <p className="typing-status typing-status--hint typing-status--clock panel-enter">
                 {formatElapsed(elapsedMs)}
               </p>
             )
           : engine.status === 'idle' &&
             !showOverlay && (
-              <p className="typing-status typing-status--hint">
+              <p className="typing-status typing-status--hint panel-enter">
                 Start typing to begin
               </p>
             )}
@@ -219,27 +230,23 @@ export function TypingRun({
         <>
           <div className="typing-results typing-results--enter">
             <div className="stat-tile stat-tile--primary">
-              <span className="stat-tile__value">
-                {Math.round(engine.stats.wpm)}
-              </span>
+              <span className="stat-tile__value">{Math.round(wpmCount)}</span>
               <span className="stat-tile__label">wpm</span>
             </div>
             <div className="stat-tile">
               <span className="stat-tile__value">
-                {Math.round(engine.stats.accuracy)}%
+                {Math.round(accuracyCount)}%
               </span>
               <span className="stat-tile__label">accuracy</span>
             </div>
             <div className="stat-tile">
               <span className="stat-tile__value">
-                {Math.round(engine.stats.rawWpm)}
+                {Math.round(rawWpmCount)}
               </span>
               <span className="stat-tile__label">raw wpm</span>
             </div>
             <div className="stat-tile">
-              <span className="stat-tile__value">
-                {engine.stats.errorCount}
-              </span>
+              <span className="stat-tile__value">{Math.round(errorCount)}</span>
               <span className="stat-tile__label">errors</span>
             </div>
           </div>
