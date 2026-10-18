@@ -1,13 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { displayName } from '../../lib/displayName'
 import { useProfile } from '../auth/useProfile'
 import { RacePage } from './RacePage'
 import { clearCurrentRoomId, setCurrentRoomId } from './currentRoom'
+import { useExitingList } from './useExitingList'
 import { useLeaveRoom } from './useLeaveRoom'
 import { useRoom } from './useRoom'
 import { useStartRace } from './useStartRace'
 import './multiplayer.css'
+
+const ROSTER_EXIT_MS = 250
+const HOST_FLASH_MS = 900
 
 export function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>()
@@ -41,6 +45,39 @@ export function RoomPage() {
   useEffect(() => {
     if (!loading && !error && !room) clearCurrentRoomId()
   }, [loading, error, room])
+
+  // Calls out a roster row that just became the new host (e.g. the
+  // previous host left) - a genuinely surprising state change otherwise
+  // easy to miss, since nothing else about the roster changed.
+  const previousHostIdRef = useRef<string | null>(null)
+  const [justTransferredHostId, setJustTransferredHostId] = useState<
+    string | null
+  >(null)
+
+  useEffect(() => {
+    const hostId = room?.host_id ?? null
+    const prevHostId = previousHostIdRef.current
+    previousHostIdRef.current = hostId
+
+    if (prevHostId === null || hostId === null || prevHostId === hostId) {
+      return
+    }
+
+    setJustTransferredHostId(hostId)
+    const timeout = setTimeout(
+      () => setJustTransferredHostId(null),
+      HOST_FLASH_MS,
+    )
+    return () => clearTimeout(timeout)
+  }, [room?.host_id])
+
+  // Lets a departing member's row fade out instead of vanishing the
+  // instant they're gone from `members` - see useExitingList.
+  const rosterEntries = useExitingList(
+    members,
+    (member) => member.user_id,
+    ROSTER_EXIT_MS,
+  )
 
   if (loading) {
     return <p className="page-status">Loading room…</p>
@@ -85,8 +122,18 @@ export function RoomPage() {
       </div>
 
       <ul className="room-roster">
-        {members.map((member) => (
-          <li key={member.user_id} className="room-roster__item">
+        {rosterEntries.map(({ key, item: member, leaving }) => (
+          <li
+            key={key}
+            className={[
+              'room-roster__item',
+              'panel-enter',
+              leaving && 'room-roster__item--leaving',
+              member.user_id === justTransferredHostId && 'attention-flash',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             <span>{displayName(member, listing)}</span>
             {member.user_id === room.host_id && (
               <span className="room-roster__host-tag">Host</span>

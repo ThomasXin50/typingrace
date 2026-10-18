@@ -105,6 +105,52 @@
   letter-spacing: 0.04em;
 }
 
+.room-roster__item--leaving {
+  animation: roster-item-leave 250ms ease-in forwards;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-roster__item--leaving {
+    animation: none;
+  }
+}
+
+@keyframes roster-item-leave {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+}
+
+/* A brief background-color flash from accent-tinted to transparent,
+   calling out an in-place state change on an existing element (not a new
+   one appearing or leaving - see .panel-enter and .room-roster__item--leaving
+   for those). Shared across a couple of deliberately-chosen moments: a
+   roster row becoming the new host, a race-track row becoming stalled. */
+.attention-flash {
+  animation: attention-flash 900ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-flash {
+    animation: none;
+  }
+}
+
+@keyframes attention-flash {
+  from {
+    background-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
 .room-page__leave-confirm {
   display: flex;
   flex-direction: column;

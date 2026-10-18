@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes, MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RoomPage } from './RoomPage'
 
 const mocks = vi.hoisted(() => ({
@@ -652,5 +652,165 @@ describe('RoomPage', () => {
 
     expect(screen.getByText('ABC123')).toBeInTheDocument()
     expect(screen.queryByText('race page')).not.toBeInTheDocument()
+  })
+
+  describe('roster join/leave and host-transfer motion', () => {
+    const baseRoom = {
+      id: 'room-1',
+      host_id: 'alice',
+      status: 'lobby' as const,
+      max_players: 8,
+      difficulty_filter: 'all' as const,
+      join_code: 'ABC123',
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('keeps a departing member rendered with a leaving class before dropping them, instead of vanishing instantly', () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [
+          {
+            user_id: 'alice',
+            status: 'active',
+            joined_at: 't1',
+            username: 'alice',
+            is_anonymous: false,
+          },
+          {
+            user_id: 'bob',
+            status: 'active',
+            joined_at: 't2',
+            username: 'bob',
+            is_anonymous: false,
+          },
+        ],
+        loading: false,
+        error: null,
+      })
+
+      const { rerender } = renderAt('room-1')
+      expect(screen.getByText('bob')).toBeInTheDocument()
+
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [
+          {
+            user_id: 'alice',
+            status: 'active',
+            joined_at: 't1',
+            username: 'alice',
+            is_anonymous: false,
+          },
+        ],
+        loading: false,
+        error: null,
+      })
+      rerender(
+        <MemoryRouter initialEntries={['/multiplayer/room-1']}>
+          <Routes>
+            <Route path="/multiplayer/:roomId" element={<RoomPage />} />
+          </Routes>
+        </MemoryRouter>,
+      )
+
+      // Bob is gone from the room data but still on screen, mid-exit.
+      expect(screen.getByText('bob').closest('li')?.className).toContain(
+        'room-roster__item--leaving',
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(250)
+      })
+
+      expect(screen.queryByText('bob')).not.toBeInTheDocument()
+    })
+
+    it('flashes the roster row that just became the new host', () => {
+      const members = [
+        {
+          user_id: 'alice',
+          status: 'active' as const,
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+        {
+          user_id: 'bob',
+          status: 'active' as const,
+          joined_at: 't2',
+          username: 'bob',
+          is_anonymous: false,
+        },
+      ]
+
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members,
+        loading: false,
+        error: null,
+      })
+
+      const { rerender } = renderAt('room-1')
+      expect(screen.getByText('bob').closest('li')?.className).not.toContain(
+        'attention-flash',
+      )
+
+      // Alice leaves; bob is promoted to host.
+      mocks.useRoom.mockReturnValue({
+        room: { ...baseRoom, host_id: 'bob' },
+        members: [members[1]],
+        loading: false,
+        error: null,
+      })
+      rerender(
+        <MemoryRouter initialEntries={['/multiplayer/room-1']}>
+          <Routes>
+            <Route path="/multiplayer/:roomId" element={<RoomPage />} />
+          </Routes>
+        </MemoryRouter>,
+      )
+
+      expect(screen.getByText('bob').closest('li')?.className).toContain(
+        'attention-flash',
+      )
+
+      act(() => {
+        vi.advanceTimersByTime(900)
+      })
+
+      expect(screen.getByText('bob').closest('li')?.className).not.toContain(
+        'attention-flash',
+      )
+    })
+
+    it('does not flash anyone on first render, only on an actual host change', () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [
+          {
+            user_id: 'alice',
+            status: 'active',
+            joined_at: 't1',
+            username: 'alice',
+            is_anonymous: false,
+          },
+        ],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+
+      expect(screen.getByText('alice').closest('li')?.className).not.toContain(
+        'attention-flash',
+      )
+    })
   })
 })
