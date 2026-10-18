@@ -58,7 +58,7 @@ export function ProfilePage() {
           <p className="stat-row-empty">No runs yet.</p>
         )}
         {stats && (
-          <div className="stat-row">
+          <div className="stat-row panel-enter">
             <div className="stat-tile stat-tile--primary">
               <span className="stat-tile__value">
                 {Math.round(stats.bestWpm)}

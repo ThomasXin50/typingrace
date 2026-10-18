@@ -36,7 +36,7 @@ export function HomePage() {
       <HeroKeyboard />
 
       {stats && (
-        <div className="stat-row">
+        <div className="stat-row panel-enter">
           <div className="stat-tile stat-tile--primary">
             <span className="stat-tile__value">
               {Math.round(stats.bestWpm)}

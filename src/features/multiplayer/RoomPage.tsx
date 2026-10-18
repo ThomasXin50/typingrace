@@ -112,7 +112,7 @@ export function RoomPage() {
       )}
 
       {confirmingLeave ? (
-        <div className="room-page__leave-confirm">
+        <div className="room-page__leave-confirm panel-enter">
           <p className="room-page__leave-confirm-text">
             You're the host - leaving will transfer host to another player.
             Continue?
