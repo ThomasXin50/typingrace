@@ -3,15 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useBotRaceProgress } from './useBotRaceProgress'
 
 describe('useBotRaceProgress', () => {
+  const START = Date.parse('2026-10-19T12:00:00.000Z')
+
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.setSystemTime(START)
   })
 
   afterEach(() => {
     vi.useRealTimers()
   })
 
-  const round = { id: 'round-1', calibration_wpm: null }
+  const startedAt = (offsetMs: number) =>
+    new Date(START + offsetMs).toISOString()
+  const round = {
+    id: 'round-1',
+    calibration_wpm: null,
+    started_at: startedAt(0),
+  }
   const bots = [{ id: 'bot-1', personality: 'typist' as const }]
 
   it('does nothing until the round and text are both available', () => {
@@ -39,6 +48,35 @@ describe('useBotRaceProgress', () => {
 
     expect(result.current.progress['bot-1']).toBeGreaterThan(0)
     expect(result.current.progress['bot-1']).toBeLessThan(1)
+  })
+
+  it('stays on the start line through the pre-race countdown', () => {
+    const countingDown = { ...round, started_at: startedAt(5000) }
+    const { result } = renderHook(() =>
+      useBotRaceProgress(bots, countingDown, 'hello world', {}, vi.fn()),
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+
+    expect(result.current.progress['bot-1']).toBe(0)
+  })
+
+  it('waits 0.5s after the start for human reaction time and network delay', () => {
+    const { result } = renderHook(() =>
+      useBotRaceProgress(bots, round, 'hello world', {}, vi.fn()),
+    )
+
+    act(() => {
+      vi.advanceTimersByTime(400)
+    })
+    expect(result.current.progress['bot-1']).toBe(0)
+
+    act(() => {
+      vi.advanceTimersByTime(800)
+    })
+    expect(result.current.progress['bot-1']).toBeGreaterThan(0)
   })
 
   it('calls onBotFinish exactly once, once the bot completes the text', () => {
@@ -118,7 +156,9 @@ describe('useBotRaceProgress', () => {
     const progressBeforeNewRound = result.current.progress['bot-1']
     expect(progressBeforeNewRound).toBeGreaterThan(0)
 
-    rerender({ round: { id: 'round-2', calibration_wpm: null } })
+    rerender({
+      round: { id: 'round-2', calibration_wpm: null, started_at: startedAt(0) },
+    })
 
     expect(result.current.progress['bot-1']).toBe(0)
   })
