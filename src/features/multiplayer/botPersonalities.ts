@@ -25,6 +25,15 @@ export const BOT_PERSONALITY_NAMES: Record<BotPersonality, string> = {
   typeracer: 'The Typeracer',
 }
 
+/** Each personality's base wpm before calibrateBaseWpm pulls it toward the
+ * room's players - see botSimulation.ts. */
+export const DEFAULT_BASE_WPM: Record<BotPersonality, number> = {
+  coder: 70,
+  typist: 75,
+  monkeytyper: 65,
+  typeracer: 60,
+}
+
 interface ListedBot {
   id: string
   personality: BotPersonality

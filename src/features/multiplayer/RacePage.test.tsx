@@ -8,12 +8,16 @@ const mocks = vi.hoisted(() => ({
   useText: vi.fn(),
   useCountdown: vi.fn(),
   useRoundResults: vi.fn(),
+  useRoundBotResults: vi.fn(),
   useSubmitRoundRun: vi.fn(),
+  useSubmitBotRun: vi.fn(),
   useRaceProgress: vi.fn(),
+  useBotRaceProgress: vi.fn(),
   useProfile: vi.fn(),
   useStallWatcher: vi.fn(),
   useStallRoundParticipant: vi.fn(),
   submit: vi.fn(),
+  submitBotRun: vi.fn(),
   sendProgress: vi.fn(),
   ping: vi.fn(),
   stall: vi.fn(),
@@ -23,11 +27,20 @@ vi.mock('./useActiveRound', () => ({ useActiveRound: mocks.useActiveRound }))
 vi.mock('./useText', () => ({ useText: mocks.useText }))
 vi.mock('./useCountdown', () => ({ useCountdown: mocks.useCountdown }))
 vi.mock('./useRoundResults', () => ({ useRoundResults: mocks.useRoundResults }))
+vi.mock('./useRoundBotResults', () => ({
+  useRoundBotResults: mocks.useRoundBotResults,
+}))
 vi.mock('./useSubmitRoundRun', () => ({
   useSubmitRoundRun: mocks.useSubmitRoundRun,
 }))
+vi.mock('./useSubmitBotRun', () => ({
+  useSubmitBotRun: mocks.useSubmitBotRun,
+}))
 vi.mock('./useRaceProgress', () => ({
   useRaceProgress: mocks.useRaceProgress,
+}))
+vi.mock('./useBotRaceProgress', () => ({
+  useBotRaceProgress: mocks.useBotRaceProgress,
 }))
 vi.mock('../auth/useProfile', () => ({ useProfile: mocks.useProfile }))
 vi.mock('./useStallWatcher', () => ({ useStallWatcher: mocks.useStallWatcher }))
@@ -57,6 +70,17 @@ describe('RacePage', () => {
       progress: {},
       sendProgress: mocks.sendProgress,
     })
+    mocks.useRoundBotResults.mockReturnValue({
+      results: [],
+      loading: false,
+      error: null,
+    })
+    mocks.useSubmitBotRun.mockReturnValue({
+      submitting: false,
+      error: null,
+      submitBotRun: mocks.submitBotRun,
+    })
+    mocks.useBotRaceProgress.mockReturnValue({ progress: {} })
     mocks.useProfile.mockReturnValue({
       profile: { id: 'me', username: 'me', isAnonymous: false },
       loading: false,
@@ -244,6 +268,105 @@ describe('RacePage', () => {
     expect(aliceDot).toHaveStyle({ left: '30%' })
     // bob has finished - shown at 100% regardless of their last broadcast.
     expect(bobDot).toHaveStyle({ left: '100%' })
+  })
+
+  describe('bots', () => {
+    const racingRound = {
+      round: {
+        id: 'round-1',
+        text_id: 'text-1',
+        started_at: '2026-01-01T00:00:05.000Z',
+      },
+      loading: false,
+      error: null,
+    }
+
+    beforeEach(() => {
+      mocks.useActiveRound.mockReturnValue(racingRound)
+      mocks.useText.mockReturnValue({
+        content: 'the quick brown fox',
+        loading: false,
+        error: null,
+      })
+      mocks.useCountdown.mockReturnValue({ msRemaining: 0, hasStarted: true })
+    })
+
+    it('renders a racing bot using its personality name and live simulated progress', () => {
+      mocks.useBotRaceProgress.mockReturnValue({ progress: { 'bot-1': 0.4 } })
+
+      render(
+        <RacePage
+          roomId="room-1"
+          bots={[{ id: 'bot-1', personality: 'coder' }]}
+        />,
+      )
+
+      expect(screen.getByText(/The Coder/)).toBeInTheDocument()
+      const dot = screen
+        .getAllByTestId('race-track-dot')
+        .find((el) => el.dataset.botId === 'bot-1')
+      expect(dot).toHaveStyle({ left: '40%' })
+    })
+
+    it("shows a finished bot's placement and wpm once its result is recorded, pinned at 100% regardless of live progress", () => {
+      mocks.useBotRaceProgress.mockReturnValue({ progress: { 'bot-1': 0.4 } })
+      mocks.useRoundBotResults.mockReturnValue({
+        results: [
+          {
+            bot_id: 'bot-1',
+            personality: 'coder',
+            wpm: 90,
+            placement: 1,
+            field_size: 2,
+          },
+        ],
+        loading: false,
+        error: null,
+      })
+
+      render(
+        <RacePage
+          roomId="room-1"
+          bots={[{ id: 'bot-1', personality: 'coder' }]}
+        />,
+      )
+
+      expect(screen.getByText('#1 · 90 wpm')).toBeInTheDocument()
+      const dot = screen
+        .getAllByTestId('race-track-dot')
+        .find((el) => el.dataset.botId === 'bot-1')
+      expect(dot).toHaveStyle({ left: '100%' })
+    })
+
+    it("submits the bot's run as soon as useBotRaceProgress reports it finished", () => {
+      mocks.useBotRaceProgress.mockReturnValue({ progress: { 'bot-1': 1 } })
+
+      render(
+        <RacePage
+          roomId="room-1"
+          bots={[{ id: 'bot-1', personality: 'coder' }]}
+        />,
+      )
+
+      const onBotFinish = mocks.useBotRaceProgress.mock.calls[0][4] as (
+        botId: string,
+        run: {
+          wpm: number
+          rawWpm: number
+          accuracy: number
+          errorCount: number
+        },
+      ) => void
+
+      onBotFinish('bot-1', { wpm: 90, rawWpm: 95, accuracy: 97, errorCount: 2 })
+
+      expect(mocks.submitBotRun).toHaveBeenCalledWith('round-1', 'bot-1', {
+        wpm: 90,
+        rawWpm: 95,
+        accuracy: 97,
+        errorCount: 2,
+      })
+    })
   })
 
   it("shows placement and wpm alongside a finished participant's track, and nothing but the track itself for one still racing", () => {

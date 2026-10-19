@@ -572,6 +572,40 @@ describe('RoomPage', () => {
     expect(screen.queryByText('ABC123')).not.toBeInTheDocument()
   })
 
+  it("passes the room's bots through to RacePage", () => {
+    mocks.useRoom.mockReturnValue({
+      room: {
+        id: 'room-1',
+        host_id: 'alice',
+        status: 'racing',
+        max_players: 8,
+        difficulty_filter: 'all',
+        join_code: 'ABC123',
+      },
+      members: [
+        {
+          user_id: 'alice',
+          status: 'active',
+          joined_at: 't1',
+          username: 'alice',
+          is_anonymous: false,
+        },
+      ],
+      bots: [{ id: 'bot-1', personality: 'coder' }],
+      loading: false,
+      error: null,
+    })
+
+    renderAt('room-1')
+
+    expect(mocks.RacePage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bots: [{ id: 'bot-1', personality: 'coder' }],
+      }),
+      undefined,
+    )
+  })
+
   it('keeps showing the race page even after room.status flips back to lobby, until the race page itself signals it is done (so a just-finished player keeps seeing their results instead of being yanked back to the lobby the instant everyone else finishes too)', () => {
     const racingRoom = {
       id: 'room-1',
