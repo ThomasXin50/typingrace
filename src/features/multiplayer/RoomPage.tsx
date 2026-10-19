@@ -116,7 +116,9 @@ export function RoomPage() {
   }
 
   if (inRace) {
-    return <RacePage roomId={room.id} onDone={() => setInRace(false)} />
+    return (
+      <RacePage roomId={room.id} bots={bots} onDone={() => setInRace(false)} />
+    )
   }
 
   const listing = members.map((m) => ({

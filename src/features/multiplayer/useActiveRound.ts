@@ -7,6 +7,7 @@ export interface RoundRow {
   text_id: string
   status: 'active' | 'finished'
   started_at: string
+  calibration_wpm: number | null
 }
 
 interface UseActiveRoundResult {

@@ -3,18 +3,30 @@ import { displayName } from '../../lib/displayName'
 import { useProfile } from '../auth/useProfile'
 import { TypingRun } from '../typing/TypingRun'
 import type { Keystroke } from '../typing/useTypingEngine'
+import { botDisplayName, type BotPersonality } from './botPersonalities'
 import { useActiveRound, type RoundRow } from './useActiveRound'
+import { useBotRaceProgress } from './useBotRaceProgress'
 import { useCountdown } from './useCountdown'
 import { useRaceProgress } from './useRaceProgress'
+import { useRoundBotResults } from './useRoundBotResults'
 import { useRoundResults } from './useRoundResults'
 import { useStallRoundParticipant } from './useStallRoundParticipant'
 import { useStallWatcher } from './useStallWatcher'
+import { useSubmitBotRun } from './useSubmitBotRun'
 import { useSubmitRoundRun } from './useSubmitRoundRun'
 import { useText } from './useText'
 import './multiplayer.css'
 
+interface RaceBot {
+  id: string
+  personality: BotPersonality
+}
+
 interface RacePageProps {
   roomId: string
+  /** The room's bots (see RoomPage/useRoom) - the roster is lobby-only
+   * mutable, so this is treated as fixed for the lifetime of a round. */
+  bots?: RaceBot[]
   /** Called once this player's post-finish grace period has elapsed - the
    * parent (RoomPage) owns actually leaving the race view; this never
    * navigates on its own. */
@@ -33,7 +45,7 @@ const PENDING_ROUND_PLACEHOLDER = '2099-01-01T00:00:00.000Z'
 const BACK_TO_LOBBY_SECONDS = 8
 const STALL_FLASH_MS = 900
 
-export function RacePage({ roomId, onDone }: RacePageProps) {
+export function RacePage({ roomId, bots = [], onDone }: RacePageProps) {
   const {
     round,
     loading: roundLoading,
@@ -63,11 +75,26 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
     effectiveRound?.started_at ?? PENDING_ROUND_PLACEHOLDER,
   )
   const { results } = useRoundResults(effectiveRound?.id ?? null)
+  const { results: botResults } = useRoundBotResults(effectiveRound?.id ?? null)
   const submitRoundRun = useSubmitRoundRun()
+  const submitBotRun = useSubmitBotRun()
   const { profile } = useProfile()
   const { progress, sendProgress } = useRaceProgress(
     effectiveRound?.id ?? null,
     profile?.id ?? null,
+  )
+  const { progress: botProgress } = useBotRaceProgress(
+    bots,
+    effectiveRound,
+    effectiveContent,
+    progress,
+    (botId, run) =>
+      submitBotRun.submitBotRun(effectiveRound!.id, botId, {
+        wpm: run.wpm,
+        rawWpm: run.rawWpm,
+        accuracy: run.accuracy,
+        errorCount: run.errorCount,
+      }),
   )
 
   // True once the live round has closed out - not "this player personally
@@ -200,7 +227,7 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
         />
       )}
 
-      {results.length > 0 && (
+      {(results.length > 0 || bots.length > 0) && (
         <ul className="race-tracks">
           {results.map((r) => {
             const pct = r.status === 'finished' ? 1 : (progress[r.user_id] ?? 0)
@@ -243,6 +270,38 @@ export function RacePage({ roomId, onDone }: RacePageProps) {
                 <span className="race-track__result">
                   {hasResult
                     ? `#${r.placement} · ${Math.round(r.wpm!)} wpm`
+                    : ''}
+                </span>
+              </li>
+            )
+          })}
+          {bots.map((bot) => {
+            const botResult = botResults.find((r) => r.bot_id === bot.id)
+            const pct = botResult ? 1 : (botProgress[bot.id] ?? 0)
+            return (
+              <li key={bot.id} className="race-track">
+                <span className="race-track__name">
+                  🤖 {botDisplayName(bot, bots)}
+                </span>
+                <div className="race-track__line">
+                  <span
+                    className="race-track__fill"
+                    style={{ width: `${pct * 100}%` }}
+                  />
+                  <span
+                    className={
+                      botResult
+                        ? 'race-track__dot race-track__dot--finished'
+                        : 'race-track__dot'
+                    }
+                    data-testid="race-track-dot"
+                    data-bot-id={bot.id}
+                    style={{ left: `${pct * 100}%` }}
+                  />
+                </div>
+                <span className="race-track__result">
+                  {botResult
+                    ? `#${botResult.placement} · ${Math.round(botResult.wpm)} wpm`
                     : ''}
                 </span>
               </li>
