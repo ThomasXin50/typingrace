@@ -1,0 +1,129 @@
+.hero-keyboard {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.hero-keyboard__viewport {
+  position: relative;
+  transform-origin: top center;
+  background: radial-gradient(
+    ellipse 520px 260px at 50% 66%,
+    var(--surface) 0%,
+    var(--bg) 68%
+  );
+  border-radius: 1rem;
+  perspective: 1300px;
+}
+
+.hero-keyboard__stage {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 1px;
+  height: 1px;
+  transform-style: preserve-3d;
+  transform: rotateX(56deg) rotateZ(-30deg);
+}
+
+.hero-keyboard__ground {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 440px;
+  height: 190px;
+  margin-left: -220px;
+  margin-top: -95px;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0) 70%
+  );
+  transform: translateZ(-4px);
+}
+
+.hero-key {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+  transform: translate3d(var(--tx), var(--ty), var(--tz, 0px));
+  transition: transform 120ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-key__top,
+.hero-key__front,
+.hero-key__left {
+  position: absolute;
+}
+
+.hero-key__top {
+  inset: 0;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateZ(var(--cap-h, 12px));
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition:
+    background 120ms,
+    color 120ms,
+    box-shadow 120ms,
+    border-color 120ms;
+}
+
+.hero-key__front {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--cap-h, 12px);
+  background: color-mix(in srgb, var(--bg) 70%, black);
+  transform-origin: bottom center;
+  transform: rotateX(-90deg);
+  border-radius: 0 0 4px 4px;
+  transition: background 120ms;
+}
+
+.hero-key__left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--cap-h, 12px);
+  background: color-mix(in srgb, var(--bg) 85%, black);
+  transform-origin: left center;
+  transform: rotateY(90deg);
+  transition: background 120ms;
+}
+
+.hero-key--pressed {
+  --tz: -9px;
+}
+
+.hero-key--pressed .hero-key__top {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 0 16px 1px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.hero-key--pressed .hero-key__front {
+  background: color-mix(in srgb, var(--accent) 55%, black);
+}
+
+.hero-key--pressed .hero-key__left {
+  background: color-mix(in srgb, var(--accent) 40%, black);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-key {
+    transition: none;
+  }
+}

@@ -24,3 +24,16 @@ pnpm-debug.log*
 coverage/
 
 .supabase/
+
+# Local skill-manager caches (never committed in this project) - synced
+# skills also get a symlink under .claude/skills/, e.g. better-icons ->
+# ../../.agents/skills/better-icons
+.agents/
+.claude/skills/better-icons
+skills-lock.json
+/deno.lock
+
+# Claude Code local runtime state - this project's own .claude/skills/
+# entries above ARE tracked, this is just per-machine state
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

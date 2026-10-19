@@ -14,11 +14,21 @@ validation, Realtime multiplayer, non-trivial calibration logic), not just CRUD.
 
 ## Auth
 
-- Anonymous sessions (`signInAnonymously`) allowed for solo practice — no
-  forced sign-up wall before trying the app.
+- Anonymous sessions (`signInAnonymously`) allowed everywhere — no forced
+  sign-up wall before trying the app, including solo runs, leaderboard
+  appearance, and hosting/joining multiplayer rooms. All of it is tied to
+  that browser's anonymous profile id, which stays stable across runs/races
+  for that session. A real account's advantage over anonymous is durability
+  (an anonymous session's history is lost if local storage is cleared or the
+  account is never upgraded), not a feature gate.
 - A real account (upgradeable from anonymous, preserving local history) is
-  required for: saved run history, leaderboard appearance, submitting texts,
-  hosting/joining multiplayer rooms.
+  required for: submitting texts to the shared pool.
+- Anywhere a profile is shown publicly — leaderboards, room rosters, race
+  results — an anonymous profile's generated username is never displayed
+  directly. It reads "Guest" instead, with a short id-derived suffix added
+  only when more than one guest appears in the same listing (e.g. several
+  anonymous players in one room), so they stay distinguishable without
+  exposing the real generated username.
 - Providers at launch: email+password, GitHub OAuth, Google OAuth.
 - Deferred: Apple OAuth (requires a paid Apple Developer account — revisit
   later if worth the cost).
@@ -133,7 +143,7 @@ typing but I'm still in the room and will auto-join the next race."
 ### Liveness: two independent signals, 10s each
 
 - **Stalled** (no keystroke of any kind from a still-connected participant
-  for 10s): `round_participants.status = 'stalled'`. Locked out of *this*
+  for 10s): `round_participants.status = 'stalled'`. Locked out of _this_
   round for good (no resuming, even if they start typing again) — this
   prevents one person from holding the round hostage after giving up.
   Their `room_members` row is untouched: they stay in the room, can spectate

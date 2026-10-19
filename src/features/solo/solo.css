@@ -1,0 +1,6 @@
+.solo-run {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: flex-start;
+}

@@ -1,0 +1,205 @@
+:root {
+  --text: #181b20;
+  --text-muted: #5a5e66;
+  --bg: #fbfaf7;
+  --surface: #f3f2ed;
+  --border: #d0cec7;
+  --accent: #9c5600;
+  --correct: #1e7729;
+  --incorrect: #c52b30;
+
+  --font-sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Consolas, monospace;
+
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font: 16px/1.5 var(--font-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #e6e8ec;
+    --text-muted: #9498a1;
+    --bg: #0d0f15;
+    --surface: #171b21;
+    --border: #2f333b;
+    --accent: #edc812;
+    --correct: #75d079;
+    --incorrect: #fd736d;
+  }
+}
+
+/* Explicit overrides from the settings page, applied via useTheme(). These
+   win over the prefers-color-scheme block above regardless of source order
+   - an attribute selector is more specific than a bare :root. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --text: #181b20;
+  --text-muted: #5a5e66;
+  --bg: #fbfaf7;
+  --surface: #f3f2ed;
+  --border: #d0cec7;
+  --accent: #9c5600;
+  --correct: #1e7729;
+  --incorrect: #c52b30;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #e6e8ec;
+  --text-muted: #9498a1;
+  --bg: #0d0f15;
+  --surface: #171b21;
+  --border: #2f333b;
+  --accent: #edc812;
+  --correct: #75d079;
+  --incorrect: #fd736d;
+}
+
+body {
+  margin: 0;
+}
+
+/* Softens the theme toggle - every color/background/border token swaps at
+   once otherwise, a hard cut across the whole page. Scoped to exactly the
+   three non-layout-triggering properties driven by the color tokens above
+   (no width/height/position - see the layout-property warning in the
+   motion guidance this app follows), so it's cheap to run broadly. A more
+   specific selector elsewhere (e.g. .btn's own hover transition) still
+   wins via normal cascade specificity, so this doesn't fight those. */
+body,
+body * {
+  transition:
+    background-color 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body,
+  body * {
+    transition: none;
+  }
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+.page-status {
+  color: var(--text-muted);
+  font-size: 1.125rem;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-tile__value {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.stat-tile--primary .stat-tile__value {
+  font-size: 3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.stat-tile__label {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.stat-row-empty {
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  margin: 0 0 2.5rem;
+}
+
+/* Shared fade/rise entrance for a panel that pops into existence on a
+   conditional render - a stat row once data loads, a confirmation panel
+   once it's triggered. Generalizes the same pattern typing.css already
+   uses for the post-run results panel. */
+.panel-enter {
+  animation: panel-enter 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-enter {
+    animation: none;
+  }
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0.5rem 1rem;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+
+.btn__shortcut {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.8125rem;
+}

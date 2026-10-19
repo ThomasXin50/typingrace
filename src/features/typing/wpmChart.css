@@ -1,0 +1,123 @@
+.wpm-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 40rem;
+}
+
+.wpm-chart__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.wpm-chart__title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.wpm-chart__toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 3px;
+}
+
+.wpm-chart__toggle:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+.wpm-chart__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.wpm-chart__svg {
+  width: 100%;
+  height: auto;
+}
+
+.wpm-chart__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.wpm-chart__gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.wpm-chart__tick-label {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  fill: var(--text-muted);
+}
+
+.wpm-chart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* Set to the path's real length (WpmChart measures it via
+     getTotalLength()) so the draw-in animation always covers the whole
+     line, however long or jagged a run makes it. The 2000 fallback only
+     applies where SVG geometry measurement isn't available (e.g. jsdom in
+     tests) and is otherwise unused. */
+  stroke-dasharray: var(--wpm-chart-path-length, 2000);
+  stroke-dashoffset: var(--wpm-chart-path-length, 2000);
+  animation: wpm-chart-draw 0.8s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wpm-chart__line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes wpm-chart-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.wpm-chart__end-dot {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.wpm-chart__crosshair {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.wpm-chart__hover-dot {
+  fill: var(--accent);
+  stroke: var(--bg);
+  stroke-width: 2;
+}
+
+.wpm-chart__tooltip {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0;
+}

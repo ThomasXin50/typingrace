@@ -1,0 +1,173 @@
+.typing-test {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  max-width: 70ch;
+}
+
+.typing-status {
+  color: var(--text-muted);
+  font-size: 1.125rem;
+}
+
+.typing-hint-slot {
+  /* Reserved regardless of whether the hint is shown, so it disappearing
+     never shifts the text below it. */
+  height: 1.5rem;
+}
+
+.typing-status--hint {
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.typing-status--clock {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.typing-text-wrap {
+  position: relative;
+  cursor: text;
+}
+
+.typing-text {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
+}
+
+.typing-text-wrap--blurred .typing-text {
+  filter: blur(4px);
+  opacity: 0.6;
+}
+
+.typing-text-viewport--clipped {
+  overflow: hidden;
+}
+
+.typing-text-viewport--clipped .typing-text {
+  transition: transform 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-text-viewport--clipped .typing-text {
+    transition: none;
+  }
+}
+
+.typing-text-wrap--blurred .typing-char--current {
+  animation-play-state: paused;
+}
+
+.typing-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.typing-overlay:hover {
+  color: var(--accent);
+}
+
+.typing-char {
+  color: var(--text-muted);
+  transition:
+    color 90ms ease,
+    text-decoration-color 90ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-char {
+    transition: none;
+  }
+}
+
+.typing-char--correct {
+  color: var(--text);
+}
+
+.typing-char--incorrect {
+  color: var(--incorrect);
+  text-decoration: underline;
+  text-decoration-color: var(--incorrect);
+}
+
+.typing-char--current {
+  border-left: 2px solid var(--accent);
+  margin-left: -2px;
+  animation: typing-caret 1s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-char--current {
+    animation: none;
+  }
+}
+
+@keyframes typing-caret {
+  0%,
+  50% {
+    border-color: var(--accent);
+  }
+  50.01%,
+  100% {
+    border-color: transparent;
+  }
+}
+
+.typing-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.typing-results {
+  display: flex;
+  align-items: baseline;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.typing-results--enter {
+  animation: typing-results-enter 0.3s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-results--enter {
+    animation: none;
+  }
+}
+
+@keyframes typing-results-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.typing-save-status {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  margin: 0;
+}

@@ -1,0 +1,11 @@
+{
+  "redirects": [
+    { "source": "/", "destination": "/demos/typing-race/", "permanent": false }
+  ],
+  "rewrites": [
+    {
+      "source": "/demos/typing-race/:path*",
+      "destination": "/demos/typing-race/index.html"
+    }
+  ]
+}

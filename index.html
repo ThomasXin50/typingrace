@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typing Race</title>
+    <script>
+      // Applied before the stylesheet paints, so a stored preference never
+      // flashes the wrong theme on load. Kept in sync by useTheme().
+      try {
+        var t = localStorage.getItem('theme-preference')
+        if (t === 'light' || t === 'dark')
+          document.documentElement.dataset.theme = t
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
