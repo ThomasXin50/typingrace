@@ -140,6 +140,50 @@ export function simulateBotRun(
   }
 }
 
+const MIN_CALIBRATED_WPM = 20
+
+/**
+ * Pulls a bot's base wpm halfway toward the human players' recent average,
+ * so a race against strong typists is a genuinely harder race than one
+ * against beginners - same spirit as this app's existing Elo/Rasch text-
+ * difficulty calibration (see DESIGN.md). `playersAvgWpm` is null when no
+ * reliable average exists yet (e.g. brand new accounts with no history),
+ * in which case the personality's own baseline is used unchanged.
+ */
+export function calibrateBaseWpm(
+  personalityBaseWpm: number,
+  playersAvgWpm: number | null,
+): number {
+  if (playersAvgWpm === null || playersAvgWpm <= 0) return personalityBaseWpm
+
+  const BLEND = 0.5
+  const blended = personalityBaseWpm * (1 - BLEND) + playersAvgWpm * BLEND
+  return Math.max(MIN_CALIBRATED_WPM, blended)
+}
+
+const RUBBER_BAND_GAIN = 0.4
+const MIN_PACE_MULTIPLIER = 0.6
+const MAX_PACE_MULTIPLIER = 1.5
+
+/**
+ * Nudges a bot's pace multiplier toward the live human pack's progress -
+ * fallen behind, speed up a little; too far ahead, ease off. Clamped so
+ * rubber-banding can bend a personality's pace but never erase its
+ * identity (a Coder on prose never gets rubber-banded into Typist-level
+ * speed). Called once per tick with the previous multiplier, not
+ * recomputed from scratch, so the adjustment is gradual rather than a
+ * snap to the human's exact position.
+ */
+export function rubberBandPaceMultiplier(
+  humanProgress: number,
+  botProgress: number,
+  previousMultiplier: number,
+): number {
+  const next =
+    previousMultiplier + RUBBER_BAND_GAIN * (humanProgress - botProgress)
+  return Math.min(MAX_PACE_MULTIPLIER, Math.max(MIN_PACE_MULTIPLIER, next))
+}
+
 /** How far through its run a bot has progressed (0-1) at a given elapsed
  * time - the bot-side analog of a human's live broadcast progress, read
  * the same way by the race UI. */
