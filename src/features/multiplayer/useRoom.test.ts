@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => {
   return {
     roomSingle: vi.fn(),
     membersEq: vi.fn(),
+    botsEq: vi.fn(),
     channelMock,
     channelFn: vi.fn(() => channelMock),
     removeChannel: vi.fn(),
@@ -21,10 +22,17 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('../../lib/supabase', () => ({
   supabase: {
-    from: (table: string) =>
-      table === 'rooms'
-        ? { select: () => ({ eq: () => ({ maybeSingle: mocks.roomSingle }) }) }
-        : { select: () => ({ eq: mocks.membersEq }) },
+    from: (table: string) => {
+      if (table === 'rooms') {
+        return {
+          select: () => ({ eq: () => ({ maybeSingle: mocks.roomSingle }) }),
+        }
+      }
+      if (table === 'room_bots') {
+        return { select: () => ({ eq: mocks.botsEq }) }
+      }
+      return { select: () => ({ eq: mocks.membersEq }) }
+    },
     channel: mocks.channelFn,
     removeChannel: mocks.removeChannel,
   },
@@ -55,6 +63,10 @@ describe('useRoom', () => {
       ],
       error: null,
     })
+    mocks.botsEq.mockResolvedValue({
+      data: [{ id: 'bot-1', personality: 'coder' }],
+      error: null,
+    })
   })
 
   it('loads the room and roster, joining profile data onto each member', async () => {
@@ -75,7 +87,15 @@ describe('useRoom', () => {
     expect(result.current.error).toBeNull()
   })
 
-  it('subscribes to a per-room realtime channel for both rooms and room_members', async () => {
+  it('loads the room bots alongside the human roster', async () => {
+    const { result } = renderHook(() => useRoom('room-1'))
+
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    expect(result.current.bots).toEqual([{ id: 'bot-1', personality: 'coder' }])
+  })
+
+  it('subscribes to a per-room realtime channel for rooms, room_members, and room_bots', async () => {
     renderHook(() => useRoom('room-1'))
 
     await waitFor(() =>
@@ -92,6 +112,11 @@ describe('useRoom', () => {
       expect.objectContaining({ table: 'rooms' }),
       expect.any(Function),
     )
+    expect(mocks.channelMock.on).toHaveBeenCalledWith(
+      'postgres_changes',
+      expect.objectContaining({ table: 'room_bots' }),
+      expect.any(Function),
+    )
     expect(mocks.channelMock.subscribe).toHaveBeenCalled()
   })
 
@@ -105,13 +130,27 @@ describe('useRoom', () => {
     expect(mocks.removeChannel).toHaveBeenCalledWith(mocks.channelMock)
   })
 
-  it('refetches the room and roster when a realtime change event fires', async () => {
+  it('refetches the room, roster, and bots when a realtime change event fires', async () => {
     renderHook(() => useRoom('room-1'))
 
     await waitFor(() => expect(mocks.roomSingle).toHaveBeenCalledTimes(1))
 
     const onCall = mocks.channelMock.on.mock.calls.find(
       (call) => (call[1] as { table?: string })?.table === 'room_members',
+    )
+    const handler = onCall![2] as () => void
+    handler()
+
+    await waitFor(() => expect(mocks.roomSingle).toHaveBeenCalledTimes(2))
+  })
+
+  it('refetches when a room_bots realtime change event fires', async () => {
+    renderHook(() => useRoom('room-1'))
+
+    await waitFor(() => expect(mocks.roomSingle).toHaveBeenCalledTimes(1))
+
+    const onCall = mocks.channelMock.on.mock.calls.find(
+      (call) => (call[1] as { table?: string })?.table === 'room_bots',
     )
     const handler = onCall![2] as () => void
     handler()

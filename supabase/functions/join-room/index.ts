@@ -48,18 +48,33 @@ export default {
       return Response.json({ error: 'room not found' }, { status: 404 })
     }
 
-    const { data: members, error: membersError } = await ctx.supabaseAdmin
-      .from('room_members')
-      .select('user_id')
-      .eq('room_id', room.id)
+    const [membersResult, botsResult] = await Promise.all([
+      ctx.supabaseAdmin
+        .from('room_members')
+        .select('user_id')
+        .eq('room_id', room.id),
+      ctx.supabaseAdmin
+        .from('room_bots')
+        .select('id', { count: 'exact', head: true })
+        .eq('room_id', room.id),
+    ])
 
-    if (membersError) {
-      return Response.json({ error: membersError.message }, { status: 500 })
+    if (membersResult.error) {
+      return Response.json(
+        { error: membersResult.error.message },
+        { status: 500 },
+      )
+    }
+    if (botsResult.error) {
+      return Response.json({ error: botsResult.error.message }, { status: 500 })
     }
 
+    const members = membersResult.data
     const alreadyMember = members.some((m) => m.user_id === userId)
+    // Bots occupy a capacity seat the same as a human member - see
+    // src/features/multiplayer/CLAUDE.md.
     const decision = canJoin({
-      memberCount: members.length,
+      memberCount: members.length + (botsResult.count ?? 0),
       maxPlayers: room.max_players,
       alreadyMember,
     })

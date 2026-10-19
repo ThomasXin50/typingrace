@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
+import type { BotPersonality } from './botPersonalities'
 
 export interface RoomRow {
   id: string
@@ -18,9 +19,15 @@ export interface RoomMember {
   is_anonymous: boolean
 }
 
+export interface RoomBot {
+  id: string
+  personality: BotPersonality
+}
+
 interface UseRoomResult {
   room: RoomRow | null
   members: RoomMember[]
+  bots: RoomBot[]
   loading: boolean
   error: string | null
 }
@@ -34,6 +41,7 @@ interface UseRoomResult {
 export function useRoom(roomId: string): UseRoomResult {
   const [room, setRoom] = useState<RoomRow | null>(null)
   const [members, setMembers] = useState<RoomMember[]>([])
+  const [bots, setBots] = useState<RoomBot[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,7 +49,7 @@ export function useRoom(roomId: string): UseRoomResult {
     let active = true
 
     async function load() {
-      const [roomResult, membersResult] = await Promise.all([
+      const [roomResult, membersResult, botsResult] = await Promise.all([
         supabase.from('rooms').select('*').eq('id', roomId).maybeSingle(),
         supabase
           .from('room_members')
@@ -49,11 +57,16 @@ export function useRoom(roomId: string): UseRoomResult {
             'user_id, status, joined_at, profiles(username, is_anonymous)',
           )
           .eq('room_id', roomId),
+        supabase
+          .from('room_bots')
+          .select('id, personality')
+          .eq('room_id', roomId),
       ])
 
       if (!active) return
 
-      const fetchError = roomResult.error ?? membersResult.error
+      const fetchError =
+        roomResult.error ?? membersResult.error ?? botsResult.error
       if (fetchError) {
         setError(fetchError.message)
         setLoading(false)
@@ -77,6 +90,7 @@ export function useRoom(roomId: string): UseRoomResult {
           is_anonymous: m.profiles.is_anonymous,
         })),
       )
+      setBots((botsResult.data ?? []) as RoomBot[])
       setLoading(false)
     }
 
@@ -104,6 +118,16 @@ export function useRoom(roomId: string): UseRoomResult {
         },
         load,
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'room_bots',
+          filter: `room_id=eq.${roomId}`,
+        },
+        load,
+      )
       .subscribe()
 
     return () => {
@@ -112,5 +136,5 @@ export function useRoom(roomId: string): UseRoomResult {
     }
   }, [roomId])
 
-  return { room, members, loading, error }
+  return { room, members, bots, loading, error }
 }

@@ -2,7 +2,7 @@ create extension if not exists pgtap;
 create extension if not exists pgcrypto;
 
 begin;
-select plan(12);
+select plan(15);
 
 -- Fixture users: alice and bob are both members of the same room; carol is
 -- a member of nothing, to prove visibility is scoped to actual membership
@@ -50,6 +50,9 @@ values
   ('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111'),
   ('66666666-6666-6666-6666-666666666666', '22222222-2222-2222-2222-222222222222');
 
+insert into public.room_bots (id, room_id, personality)
+values ('77777777-7777-7777-7777-777777777777', '55555555-5555-5555-5555-555555555555', 'coder');
+
 reset role;
 
 -- Act as Alice (a member).
@@ -80,6 +83,12 @@ select is(
   'a room member sees every participant''s row, not just their own'
 );
 
+select is(
+  (select count(*) from public.room_bots where room_id = '55555555-5555-5555-5555-555555555555'),
+  1::bigint,
+  'a room member can see the room''s bots'
+);
+
 select throws_like(
   $$ insert into public.rooms (host_id, join_code) values ('11111111-1111-1111-1111-111111111111', 'XYZ999') $$,
   '%row-level security%',
@@ -105,6 +114,13 @@ select throws_like(
      values ('66666666-6666-6666-6666-666666666666', '11111111-1111-1111-1111-111111111111') $$,
   '%row-level security%',
   'clients cannot insert round_participants directly'
+);
+
+select throws_like(
+  $$ insert into public.room_bots (room_id, personality)
+     values ('55555555-5555-5555-5555-555555555555', 'typist') $$,
+  '%row-level security%',
+  'clients cannot insert room_bots directly'
 );
 
 -- Act as Carol (not a member of this room).
@@ -133,6 +149,12 @@ select is(
   (select count(*) from public.round_participants where round_id = '66666666-6666-6666-6666-666666666666'),
   0::bigint,
   'a non-member cannot see the round''s participants'
+);
+
+select is(
+  (select count(*) from public.room_bots where room_id = '55555555-5555-5555-5555-555555555555'),
+  0::bigint,
+  'a non-member cannot see the room''s bots'
 );
 
 select * from finish();

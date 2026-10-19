@@ -1,5 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'
+import { resolvePersonality } from '../_shared/botPersonalities.ts'
 import { generateJoinCode } from './joinCode.ts'
 
 interface CreateRoomBody {
@@ -99,6 +100,17 @@ export default {
 
     if (memberError) {
       return Response.json({ error: memberError.message }, { status: 500 })
+    }
+
+    // Every new room starts with one bot already in the lobby, so a host
+    // racing solo still has someone to race - see
+    // src/features/multiplayer/CLAUDE.md.
+    const { error: botError } = await ctx.supabaseAdmin
+      .from('room_bots')
+      .insert({ room_id: room.id, personality: resolvePersonality(undefined) })
+
+    if (botError) {
+      return Response.json({ error: botError.message }, { status: 500 })
     }
 
     return Response.json({
