@@ -2,7 +2,7 @@ create extension if not exists pgtap;
 create extension if not exists pgcrypto;
 
 begin;
-select plan(8);
+select plan(15);
 
 -- Fixture: alice, bob, carol all racing in the same round.
 insert into auth.users
@@ -21,6 +21,14 @@ values
   ('00000000-0000-0000-0000-000000000000',
    '33333333-3333-3333-3333-333333333333', 'authenticated', 'authenticated',
    'carol@example.com', crypt('password123', gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000',
+   'dddddddd-dddd-dddd-dddd-dddddddddddd', 'authenticated', 'authenticated',
+   'dave@example.com', crypt('password123', gen_salt('bf')), now(),
+   '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', ''),
+  ('00000000-0000-0000-0000-000000000000',
+   'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'authenticated', 'authenticated',
+   'eve@example.com', crypt('password123', gen_salt('bf')), now(),
    '{"provider":"email","providers":["email"]}', '{}', now(), now(), '', '', '', '');
 
 set local role service_role;
@@ -90,6 +98,93 @@ select is(
    where round_id = '66666666-6666-6666-6666-666666666666' and user_id = '33333333-3333-3333-3333-333333333333'),
   'rejected',
   'finish_round_participant records the validation outcome'
+);
+
+-- A second room/round, dedicated to testing that bots and humans share
+-- one placement sequence: dave races alongside a single bot.
+insert into public.rooms (id, host_id, join_code)
+values ('a1111111-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'DEF456');
+
+insert into public.room_members (room_id, user_id)
+values ('a1111111-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd');
+
+insert into public.room_bots (id, room_id, personality)
+values ('c1111111-1111-1111-1111-111111111111', 'a1111111-1111-1111-1111-111111111111', 'coder');
+
+insert into public.rounds (id, room_id, text_id, started_at)
+values ('b1111111-1111-1111-1111-111111111111', 'a1111111-1111-1111-1111-111111111111',
+        '44444444-4444-4444-4444-444444444444', now());
+
+insert into public.round_participants (round_id, user_id)
+values ('b1111111-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd');
+
+-- The bot finishes first.
+select results_eq(
+  $$ select placement, field_size from public.finish_round_bot(
+       'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111111',
+       'coder', 72, 75, 97, 3
+     ) $$,
+  $$ values (1, 2) $$,
+  'a bot finishing first gets placement 1, field_size counts the human plus the bot'
+);
+
+-- Dave finishes after the bot - placement 2, not 1, because the bot's
+-- finish already consumed the first slot.
+select results_eq(
+  $$ select placement, field_size from public.finish_round_participant(
+       'b1111111-1111-1111-1111-111111111111', 'dddddddd-dddd-dddd-dddd-dddddddddddd',
+       'finished', 'verified', 60, 96
+     ) $$,
+  $$ values (2, 2) $$,
+  'a human finishing after a bot is placed behind it, not re-using its slot'
+);
+
+-- A redundant finish_round_bot call (e.g. a second client also noticing
+-- the same bot cross the line) must not re-roll the placement or
+-- overwrite the already-recorded wpm.
+select results_eq(
+  $$ select placement, field_size from public.finish_round_bot(
+       'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111111',
+       'coder', 9999, 9999, 50, 50
+     ) $$,
+  $$ values (1, 2) $$,
+  'a duplicate finish_round_bot call for the same bot returns the original placement unchanged'
+);
+
+select is(
+  (select wpm from public.round_bot_results
+   where round_id = 'b1111111-1111-1111-1111-111111111111' and bot_id = 'c1111111-1111-1111-1111-111111111111'),
+  72::numeric,
+  'the duplicate call did not overwrite the originally recorded wpm'
+);
+
+-- Room membership gates round_bot_results visibility the same way it
+-- gates round_participants.
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', 'dddddddd-dddd-dddd-dddd-dddddddddddd', 'role', 'authenticated')::text, true);
+
+select is(
+  (select count(*) from public.round_bot_results where round_id = 'b1111111-1111-1111-1111-111111111111'),
+  1::bigint,
+  'a room member can see the round''s bot results'
+);
+
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'role', 'authenticated')::text, true);
+
+select is(
+  (select count(*) from public.round_bot_results where round_id = 'b1111111-1111-1111-1111-111111111111'),
+  0::bigint,
+  'a non-member cannot see the round''s bot results'
+);
+
+select throws_like(
+  $$ select * from public.finish_round_bot(
+       'b1111111-1111-1111-1111-111111111111', 'c1111111-1111-1111-1111-111111111111',
+       'coder', 1, 1, 100, 0
+     ) $$,
+  '%permission denied%',
+  'a client cannot call finish_round_bot directly either'
 );
 
 -- A direct client call (not the service role) must be denied - only the

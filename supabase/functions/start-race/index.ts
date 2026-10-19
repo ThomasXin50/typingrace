@@ -1,5 +1,6 @@
 import '@supabase/functions-js/edge-runtime.d.ts'
 import { withSupabase } from '@supabase/server'
+import { averageWpm } from './calibration.ts'
 import { pickText } from './pickText.ts'
 
 const COUNTDOWN_MS = 5000
@@ -85,18 +86,6 @@ export default {
     const textId = pickText(texts, room.difficulty_filter)
     const text = texts.find((t) => t.id === textId)!
 
-    const startedAt = new Date(Date.now() + COUNTDOWN_MS).toISOString()
-
-    const { data: round, error: roundError } = await ctx.supabaseAdmin
-      .from('rounds')
-      .insert({ room_id: roomId, text_id: textId, started_at: startedAt })
-      .select()
-      .single()
-
-    if (roundError) {
-      return Response.json({ error: roundError.message }, { status: 500 })
-    }
-
     const { data: members, error: membersError } = await ctx.supabaseAdmin
       .from('room_members')
       .select('user_id')
@@ -105,6 +94,43 @@ export default {
 
     if (membersError) {
       return Response.json({ error: membersError.message }, { status: 500 })
+    }
+
+    // Players' recent average wpm, so any bots in this room start the race
+    // calibrated to how fast these particular players actually are - see
+    // calibrateBaseWpm in the frontend's botSimulation.ts and
+    // src/features/multiplayer/CLAUDE.md. Every client reads this same
+    // stored value rather than each computing its own.
+    const { data: leaderboardRows, error: leaderboardError } =
+      await ctx.supabaseAdmin
+        .from('leaderboard_global')
+        .select('avg_wpm')
+        .in(
+          'user_id',
+          members.map((m) => m.user_id),
+        )
+
+    if (leaderboardError) {
+      return Response.json({ error: leaderboardError.message }, { status: 500 })
+    }
+
+    const calibrationWpm = averageWpm(leaderboardRows.map((r) => r.avg_wpm))
+
+    const startedAt = new Date(Date.now() + COUNTDOWN_MS).toISOString()
+
+    const { data: round, error: roundError } = await ctx.supabaseAdmin
+      .from('rounds')
+      .insert({
+        room_id: roomId,
+        text_id: textId,
+        started_at: startedAt,
+        calibration_wpm: calibrationWpm,
+      })
+      .select()
+      .single()
+
+    if (roundError) {
+      return Response.json({ error: roundError.message }, { status: 500 })
     }
 
     const { error: participantsError } = await ctx.supabaseAdmin
