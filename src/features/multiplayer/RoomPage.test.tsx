@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Route, Routes, MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,6 +12,10 @@ const mocks = vi.hoisted(() => ({
   useProfile: vi.fn(),
   useStartRace: vi.fn(),
   startRace: vi.fn(),
+  useAddBot: vi.fn(),
+  addBot: vi.fn(),
+  useRemoveBot: vi.fn(),
+  removeBot: vi.fn(),
   setCurrentRoomId: vi.fn(),
   clearCurrentRoomId: vi.fn(),
   RacePage: vi.fn(({ onDone }: { onDone: () => void }) => (
@@ -26,6 +30,8 @@ vi.mock('./useRoom', () => ({ useRoom: mocks.useRoom }))
 vi.mock('./useLeaveRoom', () => ({ useLeaveRoom: mocks.useLeaveRoom }))
 vi.mock('../auth/useProfile', () => ({ useProfile: mocks.useProfile }))
 vi.mock('./useStartRace', () => ({ useStartRace: mocks.useStartRace }))
+vi.mock('./useAddBot', () => ({ useAddBot: mocks.useAddBot }))
+vi.mock('./useRemoveBot', () => ({ useRemoveBot: mocks.useRemoveBot }))
 vi.mock('./RacePage', () => ({ RacePage: mocks.RacePage }))
 vi.mock('./currentRoom', () => ({
   setCurrentRoomId: mocks.setCurrentRoomId,
@@ -65,6 +71,16 @@ describe('RoomPage', () => {
       round: null,
       error: null,
       startRace: mocks.startRace,
+    })
+    mocks.useAddBot.mockReturnValue({
+      adding: false,
+      error: null,
+      addBot: mocks.addBot,
+    })
+    mocks.useRemoveBot.mockReturnValue({
+      removing: false,
+      error: null,
+      removeBot: mocks.removeBot,
     })
   })
 
@@ -811,6 +827,228 @@ describe('RoomPage', () => {
       expect(screen.getByText('alice').closest('li')?.className).not.toContain(
         'attention-flash',
       )
+    })
+  })
+
+  describe('bots', () => {
+    const baseRoom = {
+      id: 'room-1',
+      host_id: 'alice',
+      status: 'lobby' as const,
+      max_players: 8,
+      difficulty_filter: 'all' as const,
+      join_code: 'ABC123',
+    }
+    const aliceMember = {
+      user_id: 'alice',
+      status: 'active' as const,
+      joined_at: 't1',
+      username: 'alice',
+      is_anonymous: false,
+    }
+
+    it("renders a bot's personality name in the roster", () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [aliceMember],
+        bots: [{ id: 'bot-1', personality: 'coder' }],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+
+      expect(
+        within(screen.getByRole('list')).getByText('The Coder'),
+      ).toBeInTheDocument()
+    })
+
+    it('disambiguates bots that share a personality', () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [aliceMember],
+        bots: [
+          { id: 'bot-1111', personality: 'coder' },
+          { id: 'bot-2222', personality: 'coder' },
+        ],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+
+      expect(screen.getByText('The Coder #1111')).toBeInTheDocument()
+      expect(screen.getByText('The Coder #2222')).toBeInTheDocument()
+    })
+
+    it('shows a Remove button for a bot only to the host', () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [
+          aliceMember,
+          {
+            user_id: 'bob',
+            status: 'active' as const,
+            joined_at: 't2',
+            username: 'bob',
+            is_anonymous: false,
+          },
+        ],
+        bots: [{ id: 'bot-1', personality: 'typist' }],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+      expect(
+        screen.getByRole('button', { name: /remove/i }),
+      ).toBeInTheDocument()
+    })
+
+    it('does not show a Remove button for a bot to a non-host', () => {
+      mocks.useProfile.mockReturnValue({
+        profile: { id: 'bob', username: 'bob', isAnonymous: false },
+        loading: false,
+        error: null,
+      })
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [
+          aliceMember,
+          {
+            user_id: 'bob',
+            status: 'active' as const,
+            joined_at: 't2',
+            username: 'bob',
+            is_anonymous: false,
+          },
+        ],
+        bots: [{ id: 'bot-1', personality: 'typist' }],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+
+      expect(
+        screen.queryByRole('button', { name: /remove/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('removes a bot when the host clicks Remove', async () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [aliceMember],
+        bots: [{ id: 'bot-1', personality: 'typist' }],
+        loading: false,
+        error: null,
+      })
+      const user = userEvent.setup()
+
+      renderAt('room-1')
+      await user.click(screen.getByRole('button', { name: /remove/i }))
+
+      expect(mocks.removeBot).toHaveBeenCalledWith('room-1', 'bot-1')
+    })
+
+    it('shows an add-bot control only to the host', () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [aliceMember],
+        bots: [],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+
+      expect(
+        screen.getByRole('button', { name: /add bot/i }),
+      ).toBeInTheDocument()
+    })
+
+    it('does not show the add-bot control to a non-host', () => {
+      mocks.useProfile.mockReturnValue({
+        profile: { id: 'bob', username: 'bob', isAnonymous: false },
+        loading: false,
+        error: null,
+      })
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [
+          aliceMember,
+          {
+            user_id: 'bob',
+            status: 'active' as const,
+            joined_at: 't2',
+            username: 'bob',
+            is_anonymous: false,
+          },
+        ],
+        bots: [],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+
+      expect(
+        screen.queryByRole('button', { name: /add bot/i }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('adds a bot with the selected personality', async () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [aliceMember],
+        bots: [],
+        loading: false,
+        error: null,
+      })
+      const user = userEvent.setup()
+
+      renderAt('room-1')
+      await user.selectOptions(
+        screen.getByLabelText(/bot personality/i),
+        'typist',
+      )
+      await user.click(screen.getByRole('button', { name: /add bot/i }))
+
+      expect(mocks.addBot).toHaveBeenCalledWith('room-1', 'typist')
+    })
+
+    it('adds a random bot when the picker is left on its default', async () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [aliceMember],
+        bots: [],
+        loading: false,
+        error: null,
+      })
+      const user = userEvent.setup()
+
+      renderAt('room-1')
+      await user.click(screen.getByRole('button', { name: /add bot/i }))
+
+      expect(mocks.addBot).toHaveBeenCalledWith('room-1', undefined)
+    })
+
+    it('disables the add-bot button once the room has the maximum number of bots', () => {
+      mocks.useRoom.mockReturnValue({
+        room: baseRoom,
+        members: [aliceMember],
+        bots: [
+          { id: 'bot-1', personality: 'coder' },
+          { id: 'bot-2', personality: 'typist' },
+          { id: 'bot-3', personality: 'monkeytyper' },
+        ],
+        loading: false,
+        error: null,
+      })
+
+      renderAt('room-1')
+
+      expect(screen.getByRole('button', { name: /add bot/i })).toBeDisabled()
     })
   })
 })
