@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   botProgressAtTime,
+  calibrateBaseWpm,
   createSeededRandom,
+  rubberBandPaceMultiplier,
   simulateBotRun,
 } from './botSimulation'
 
@@ -111,6 +113,50 @@ describe('simulateBotRun', () => {
     const easyCharDelays = delays.filter((_, i) => /[a-z ]/.test(MIXED[i]))
     const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length
     expect(avg(hardCharDelays)).toBeGreaterThan(avg(easyCharDelays))
+  })
+})
+
+describe('calibrateBaseWpm', () => {
+  it('returns the personality default unchanged when no player average is known', () => {
+    expect(calibrateBaseWpm(70, null)).toBe(70)
+  })
+
+  it('returns the personality default unchanged for a non-positive player average', () => {
+    expect(calibrateBaseWpm(70, 0)).toBe(70)
+    expect(calibrateBaseWpm(70, -5)).toBe(70)
+  })
+
+  it("blends halfway toward the players' average wpm", () => {
+    expect(calibrateBaseWpm(70, 100)).toBe(85)
+    expect(calibrateBaseWpm(70, 40)).toBe(55)
+  })
+
+  it('never calibrates below a sane minimum wpm', () => {
+    expect(calibrateBaseWpm(10, 1)).toBe(20)
+  })
+})
+
+describe('rubberBandPaceMultiplier', () => {
+  it('increases the multiplier when the bot has fallen behind the human pack', () => {
+    const next = rubberBandPaceMultiplier(0.6, 0.4, 1)
+    expect(next).toBeGreaterThan(1)
+  })
+
+  it('decreases the multiplier when the bot is ahead of the human pack', () => {
+    const next = rubberBandPaceMultiplier(0.3, 0.6, 1)
+    expect(next).toBeLessThan(1)
+  })
+
+  it('leaves the multiplier unchanged when progress is exactly matched', () => {
+    expect(rubberBandPaceMultiplier(0.5, 0.5, 1)).toBe(1)
+  })
+
+  it('never lets the multiplier exceed the upper clamp', () => {
+    expect(rubberBandPaceMultiplier(1, 0, 1.4)).toBeLessThanOrEqual(1.5)
+  })
+
+  it('never lets the multiplier drop below the lower clamp', () => {
+    expect(rubberBandPaceMultiplier(0, 1, 0.7)).toBeGreaterThanOrEqual(0.6)
   })
 })
 
