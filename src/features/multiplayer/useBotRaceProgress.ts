@@ -16,6 +16,7 @@ interface SimulatedBot {
 interface SimulatedRound {
   id: string
   calibration_wpm: number | null
+  started_at: string
 }
 
 interface UseBotRaceProgressResult {
@@ -27,6 +28,11 @@ interface UseBotRaceProgressResult {
 // consistent perceived smoothness - not exported from there, so this is a
 // small duplicated literal rather than an import across features.
 const TICK_MS = 200
+
+// Bots hold still this long after round.started_at: a human needs a moment
+// to react to "go", and their first keystrokes reach other clients over the
+// network, so a bot leaving on the exact start instant would always lead.
+export const BOT_REACTION_DELAY_MS = 500
 
 interface Simulation {
   runs: Record<string, BotRunResult>
@@ -113,7 +119,19 @@ export function useBotRaceProgress(
       finished: new Set(),
     }
 
+    // The round loads during the pre-race countdown, so ticks before the
+    // start (plus the reaction delay) must not advance anyone. Each tick
+    // advances by the real time elapsed past that point, so the first one
+    // after it counts only the part actually past it.
+    const goMs = Date.parse(round.started_at) + BOT_REACTION_DELAY_MS
+    let lastTickMs = Date.now()
+
     const interval = setInterval(() => {
+      const now = Date.now()
+      const elapsedMs = Math.max(0, now - Math.max(lastTickMs, goMs))
+      lastTickMs = now
+      if (elapsedMs === 0) return
+
       const sim = simulationRef.current
       const humanValues = Object.values(humanProgressRef.current)
       const avgHumanProgress =
@@ -135,7 +153,7 @@ export function useBotRaceProgress(
           currentProgress,
           sim.multiplier[bot.id],
         )
-        sim.effectiveMs[bot.id] += TICK_MS * sim.multiplier[bot.id]
+        sim.effectiveMs[bot.id] += elapsedMs * sim.multiplier[bot.id]
 
         const updatedProgress = botProgressAtTime(run, sim.effectiveMs[bot.id])
         next[bot.id] = updatedProgress
