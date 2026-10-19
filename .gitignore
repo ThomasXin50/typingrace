@@ -33,7 +33,7 @@ coverage/
 skills-lock.json
 /deno.lock
 
-# Claude Code local runtime state - .claude/rules/ and this project's own
-# .claude/skills/ entries above ARE tracked, this is just per-machine state
+# Claude Code local runtime state - this project's own .claude/skills/
+# entries above ARE tracked, this is just per-machine state
 .claude/scheduled_tasks.lock
 .claude/settings.local.json

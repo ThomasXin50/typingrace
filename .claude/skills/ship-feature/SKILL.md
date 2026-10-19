@@ -15,7 +15,7 @@ doesn't need to be re-derived each time.
    `git checkout -b <issue-number>-short-description`.
 3. **Red, then green.** Write/update the failing test before the
    implementation. Frontend: Vitest + React Testing Library. Edge
-   Functions / Postgres: see `.claude/rules/supabase.md`.
+   Functions / Postgres: see `supabase/CLAUDE.md`.
 4. **Verify locally before committing** (all must pass):
    - `npx vitest run`
    - `npx eslint .`
@@ -45,5 +45,5 @@ doesn't need to be re-derived each time.
    it (or explicitly do it themselves).
 10. **After merge**, if the change touched `supabase/migrations/` or
     `supabase/functions/`, see the "After a merge" section of
-    `.claude/rules/supabase.md` - that deploy step is manual and needs
-    separate confirmation, it does not happen as part of this flow.
+    `supabase/CLAUDE.md` - that deploy step is manual and needs separate
+    confirmation, it does not happen as part of this flow.

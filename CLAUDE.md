@@ -17,11 +17,17 @@ the code.
 - `src/app/` — app shell: router, nav, theme.
 - `src/lib/` — small cross-feature utilities (e.g. `formatElapsed`,
   `displayName`, the Supabase client).
-- `supabase/functions/` — Edge Functions (Deno), one folder per function.
-  Backend-specific conventions: `.claude/rules/supabase.md` (loads
-  automatically when you touch this folder).
-- `supabase/migrations/` — SQL migrations, timestamp-prefixed.
-- `supabase/tests/database/` — pgTAP tests (RLS, triggers).
+- `supabase/` — Postgres migrations, Edge Functions (Deno), pgTAP tests.
+  Backend-specific conventions: `supabase/CLAUDE.md` (loads automatically
+  when you work in this folder).
+
+A few feature folders under `src/features/` have enough non-obvious domain
+behavior to carry their own `CLAUDE.md` (same auto-load-when-you're-in-it
+mechanism): `multiplayer/`, `typing/`, `profile/`. The rest (`home/`,
+`leaderboard/`, `auth/`, `solo/`) are simple enough that a quick read of
+the code covers them — don't add a `CLAUDE.md` there preemptively; add one
+only once that folder actually accumulates a non-obvious invariant worth
+preserving.
 
 ## Branching
 
@@ -61,7 +67,7 @@ the code.
   the suite green throughout. This applies to every change, not just new
   features — a bug fix starts with a test that reproduces the bug.
 - Stack: Vitest + React Testing Library (frontend), Deno's test runner
-  (Edge Functions — see `.claude/rules/supabase.md`), pgTAP (Postgres/RLS).
+  (Edge Functions — see `supabase/CLAUDE.md`), pgTAP (Postgres/RLS).
 - CI runs the full suite on every PR with an **80% coverage gate**. A
   failing test or a coverage drop below 80% blocks the merge.
 - Before committing, run locally: `npx vitest run`, `npx eslint .`,
